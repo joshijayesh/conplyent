@@ -25,24 +25,24 @@ class ConsoleExecutor():
 
     @property
     def alive(self):
-        return self._alive
+        return self.__bg_worker.is_alive()
 
     def read_output(self, timeout=None):
         while(True):
             try:
-                if(self.__bg_worker.is_alive()):
+                if(self.alive):
                     self.__poll_queue(timeout=timeout, exception=ConsoleExecTimeout)
                     if(self.__queue.empty()):
-                        return
+                        return None
                     else:
-                        yield self.__queue.get(timeout=1)  # should never halt here...
+                        return self.__queue.get(timeout=1)  # should never halt here...
                 else:
-                    return
+                    return None
             except (Empty, ConsoleExecTimeout):
-                yield None
+                return None
 
     def send_input(self, value):
-        if(self.__bg_worker.is_alive()):
+        if(self.alive):
             self.__popen.stdin.write(value + "\n")
             self.__popen.stdin.flush()
 
