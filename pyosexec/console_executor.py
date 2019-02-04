@@ -1,6 +1,8 @@
 from subprocess import Popen, PIPE, STDOUT
 from threading import Thread
 from queue import Queue, Empty
+from ._decorators import timeout
+from .exceptions import ConsoleExecTimeout
 
 
 class ConsoleExecutor():
@@ -25,15 +27,18 @@ class ConsoleExecutor():
     def alive(self):
         return self._alive
 
-    def read_output(self, timeout=1):
+    def read_output(self, timeout=None):
         while(True):
             try:
                 if(self.__bg_worker.is_alive()):
-                    line = self.__queue.get(timeout=timeout)
-                    yield line[:-1]
+                    self.__poll_queue(timeout=timeout, exception=ConsoleExecTimeout)
+                    if(self.__queue.empty()):
+                        return
+                    else:
+                        yield self.__queue.get(timeout=1)  # should never halt here...
                 else:
                     return
-            except Empty:
+            except (Empty, ConsoleExecTimeout):
                 yield None
 
     def send_input(self, value):
@@ -49,3 +54,8 @@ class ConsoleExecutor():
         for line in iter(file.readline, ''):
             queue.put(line)
         file.close()
+
+    @timeout(name="Polling Queue")
+    def __poll_queue(self, **kwargs):
+        while(self.__queue.empty() and self.__bg_worker.is_alive()):
+            yield None

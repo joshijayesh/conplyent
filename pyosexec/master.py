@@ -49,6 +49,7 @@ class MasterConnection():
                 response = listener.next()
                 logger.info("Server response: {}".format(response))
         else:
+            print("returning listener")
             return listener
 
     def __send_command(self, cmd_id, *args, timeout=None, **kwargs):
