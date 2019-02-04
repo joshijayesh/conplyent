@@ -1,4 +1,6 @@
-from pyosexec import executor
+import logging
+from pyosexec import server_executor
 
 
-executor.start()
+logging.basicConfig(level=logging.INFO)
+server_executor.start()

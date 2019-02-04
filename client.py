@@ -3,7 +3,7 @@ import logging
 from pyosexec import client
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
@@ -13,6 +13,10 @@ client_connection.connect()
 client_connection.cd(dest="test")
 #  client_connection.wrfile("test.txt", "Some form of data\n", append=True)
 #  client_connection.touch("test.txt")
+#  t1 = client_connection.exec("python paused_multiple_output.py Thread1")
+#  t2 = client_connection.exec("python paused_multiple_output.py Thread2")
+#  t3 = client_connection.exec("python paused_multiple_output.py Thread3")
+
 t1 = client_connection.exec("python paused_multiple_output.py Thread1", complete=False)
 t2 = client_connection.exec("python paused_multiple_output.py Thread2", complete=False)
 t3 = client_connection.exec("python paused_multiple_output.py Thread3", complete=False)
