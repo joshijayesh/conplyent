@@ -1,21 +1,35 @@
 import zmq
 import time
-import logging
-from threading import Thread
+from threading import Thread, local
 from queue import Queue
 
 from ._msg import MSG, MSGType
 from ._decorators import timeout
 from .exceptions import ZMQPairTimeout
-from . import _zmq_context
+from .log import logger
 
 
-logger = logging.getLogger(__name__)
+_ctx = local()
+
+
+def get_context():
+    try:
+        return getattr(_ctx, "zmq_context")
+    except (AttributeError, IndexError):
+        _ctx.__dict__["zmq_context"] = zmq.Context()
+        return _ctx.zmq_context
+
+
+def close_context():
+    try:
+        getattr(_ctx, "zmq_context").term()
+    except (AttributeError, IndexError):
+        pass  # No need to close context?
 
 
 class ZMQPair(object):
     def __init__(self, dest_ip=None, port=8001):
-        self._context = _zmq_context.get_context()
+        self._context = get_context()
         self._socket = self._context.socket(zmq.PAIR)
         self._socket.setsockopt(zmq.LINGER, 0)
         self._dest_ip = dest_ip
