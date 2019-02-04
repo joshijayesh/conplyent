@@ -1,19 +1,18 @@
-import logging
-
-from ._zmq_wrapper import ZMQPair
+from threading import local
+from ._zmq_pair import ZMQPair
 from ._msg import MSG, MSGType
 from .exceptions import ZMQPairTimeout
-from . import _client_pool as pool
+from .log import logger
 
-logger = logging.getLogger(__name__)
+_pool = local()
 
 
 def add(hostname, port=8001):
     new_pair = ZMQPair(hostname, port)
-    return ClientConnection(pool.new_connection(new_pair))
+    return ClientConnection(_new_connection(new_pair))
 
 
-def _wrap_slave_methods(cls, name):
+def _wrap_server_methods(cls, name):
     def wrapper(self, *args, **kwargs):
         return self._command_generic(name, *args, **kwargs)
     return wrapper
@@ -25,7 +24,7 @@ class ClientConnection():
         self.__synced = False
 
     def connect(self, timeout=None):
-        connection = pool.get_connection(self.__conn_id)
+        connection = _get_connection(self.__conn_id)
         connection.connect()
         if(timeout):
             logger.info("Waiting {}s for {} to respond...".format(self.__conn_id))
@@ -38,35 +37,34 @@ class ClientConnection():
             self.__synced = True
 
     def close(self):
-        connection = pool.get_connection(self.__conn_id)
+        connection = _get_connection(self.__conn_id)
         connection.close()
         logger.info("Closing connection to {}".format(self.__conn_id))
 
     def _command_generic(self, cmd_id, *args, timeout=None, complete=True, **kwargs):
         listener = self.__send_command(cmd_id, timeout=timeout, *args, **kwargs)
         if(complete):
-            while(not(listener.done)):
-                response = listener.next()
-                logger.info("Server response: {}".format(response))
+            for response in iter(listener.next, None):
+                logger.info("<Server> {}".format(response))
         else:
             return listener
 
     def __send_command(self, cmd_id, *args, timeout=None, **kwargs):
-        connection = pool.get_connection(self.__conn_id)
+        connection = _get_connection(self.__conn_id)
         msg = MSG(MSGType.COMMAND, cmd_id=cmd_id, args=args, keywargs=kwargs)
         connection.send_msg(msg, timeout)
         logger.debug("Sent Message: {}".format(msg))
         return ClientConnection.ConnectionListener(self.__conn_id)
 
     def __sync_attr(self, timeout=None):
-        connection = pool.get_connection(self.__conn_id)
+        connection = _get_connection(self.__conn_id)
         connection.send_msg(MSG(MSGType.SYNC, request=True))
         extra_list = list()
         while(True):
             msg = connection.recv_msg(timeout=timeout)
             if(msg.type == MSGType.SYNC):
                 for name in msg.args[0]:
-                    setattr(ClientConnection, name, _wrap_slave_methods(self, name))
+                    setattr(ClientConnection, name, _wrap_server_methods(self, name))
                 break
             else:
                 extra_list.append(msg)
@@ -79,6 +77,7 @@ class ClientConnection():
             self.__find_ack()
             self._done = False
             self._exit_code = None
+            self.__curr_msg = 0
 
         @property
         def done(self):
@@ -90,13 +89,15 @@ class ClientConnection():
 
         def next(self, timeout=0):
             assert not(self._done), "Server has already completed job..."
-            connection = pool.get_connection(self.__conn_id)
+            connection = _get_connection(self.__conn_id)
             extra_list = list()
             response = None
             while(True):
                 try:
                     msg = connection.recv_msg(timeout=timeout)
-                    if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and msg.request_id == self.__id):
+                    if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and
+                       msg.request_id == self.__id and msg.msg_num == self.__curr_msg):
+                        self.__curr_msg += 1
                         if(msg.type == MSGType.COMPLETE):
                             self._done = True
                             response = None
@@ -112,7 +113,7 @@ class ClientConnection():
             return response
 
         def __find_ack(self, timeout=5):
-            connection = pool.get_connection(self.__conn_id)
+            connection = _get_connection(self.__conn_id)
             extra_list = list()
             while(True):
                 try:
@@ -129,3 +130,21 @@ class ClientConnection():
         def __return_list(self, connection, extra_list):
             for extra in extra_list:
                 connection.requeue_msg(extra)
+
+
+def _new_connection(conn):
+    conn_id = "{}:{}".format(conn.dest_ip, conn.port)
+    try:
+        connection = _get_connection(conn_id)
+        connection.close()
+    except RuntimeError:
+        pass
+    _pool.__dict__.setdefault("pyosexec_pool", dict())[conn_id] = conn
+    return conn_id
+
+
+def _get_connection(conn_id):
+    try:
+        return getattr(_pool, "pyosexec_pool")[conn_id]
+    except (AttributeError, KeyError, IndexError):
+        raise RuntimeError("Connection {} has not been set up".format(conn_id))
