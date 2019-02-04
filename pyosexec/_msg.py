@@ -53,3 +53,7 @@ class MSG(object):
     @property
     def exit_code(self):
         return self._kwargs["exit_code"]
+
+    @property
+    def msg_num(self):
+        return self._kwargs["msg_num"]
