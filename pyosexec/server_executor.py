@@ -171,7 +171,7 @@ def cat(zp, idx, path):
             while(True):
                 chunk = file.read(1024)
                 if(chunk):
-                    update_client(zp, idx, file.read(1024))
+                    update_client(zp, idx, chunk)
                 else:
                     break
         return 0
