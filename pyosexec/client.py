@@ -3,14 +3,14 @@ import logging
 from ._zmq_wrapper import ZMQPair
 from ._msg import MSG, MSGType
 from .exceptions import ZMQPairTimeout
-from . import _master_pool as pool
+from . import _client_pool as pool
 
 logger = logging.getLogger(__name__)
 
 
 def add(hostname, port=8001):
     new_pair = ZMQPair(hostname, port)
-    return MasterConnection(pool.new_connection(new_pair))
+    return ClientConnection(pool.new_connection(new_pair))
 
 
 def _wrap_slave_methods(cls, name):
@@ -19,7 +19,7 @@ def _wrap_slave_methods(cls, name):
     return wrapper
 
 
-class MasterConnection():
+class ClientConnection():
     def __init__(self, conn_id):
         self.__conn_id = conn_id
         self.__synced = False
@@ -49,7 +49,6 @@ class MasterConnection():
                 response = listener.next()
                 logger.info("Server response: {}".format(response))
         else:
-            print("returning listener")
             return listener
 
     def __send_command(self, cmd_id, *args, timeout=None, **kwargs):
@@ -57,7 +56,7 @@ class MasterConnection():
         msg = MSG(MSGType.COMMAND, cmd_id=cmd_id, args=args, keywargs=kwargs)
         connection.send_msg(msg, timeout)
         logger.debug("Sent Message: {}".format(msg))
-        return MasterConnection.ConnectionListener(self.__conn_id)
+        return ClientConnection.ConnectionListener(self.__conn_id)
 
     def __sync_attr(self, timeout=None):
         connection = pool.get_connection(self.__conn_id)
@@ -67,7 +66,7 @@ class MasterConnection():
             msg = connection.recv_msg(timeout=timeout)
             if(msg.type == MSGType.SYNC):
                 for name in msg.args[0]:
-                    setattr(MasterConnection, name, _wrap_slave_methods(self, name))
+                    setattr(ClientConnection, name, _wrap_slave_methods(self, name))
                 break
             else:
                 extra_list.append(msg)
@@ -90,6 +89,7 @@ class MasterConnection():
             return self._exit_code
 
         def next(self, timeout=0):
+            assert not(self._done), "Server has already completed job..."
             connection = pool.get_connection(self.__conn_id)
             extra_list = list()
             response = None
@@ -99,7 +99,7 @@ class MasterConnection():
                     if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and msg.request_id == self.__id):
                         if(msg.type == MSGType.COMPLETE):
                             self._done = True
-                            response = msg.exit_code
+                            response = None
                             self._exit_code = msg.exit_code
                         else:
                             response = msg.details

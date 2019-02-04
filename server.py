@@ -1,4 +1,4 @@
-from pyosexec import slave
+from pyosexec import executor
 
 
-slave.start()
+executor.start()
