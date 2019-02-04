@@ -1,0 +1,3 @@
+
+class ZMQPairTimeout(RuntimeError):
+    pass
