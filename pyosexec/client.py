@@ -1,4 +1,6 @@
 from threading import local
+import time
+
 from ._zmq_pair import ZMQPair
 from ._msg import MSG, MSGType
 from .exceptions import ZMQPairTimeout
@@ -54,7 +56,7 @@ class ClientConnection():
         msg = MSG(MSGType.COMMAND, cmd_id=cmd_id, args=args, keywargs=kwargs)
         connection.send_msg(msg, timeout)
         logger.debug("Sent Message: {}".format(msg))
-        return ClientConnection.ConnectionListener(self.__conn_id)
+        return ClientConnection.ConnectionListener(connection)
 
     def __sync_attr(self, timeout=None):
         connection = _get_connection(self.__conn_id)
@@ -72,8 +74,8 @@ class ClientConnection():
             connection.requeue_msg(extra)
 
     class ConnectionListener():
-        def __init__(self, conn_id):
-            self.__conn_id = conn_id
+        def __init__(self, connection):
+            self.__connection = connection
             self.__find_ack()
             self._done = False
             self._exit_code = None
@@ -87,16 +89,18 @@ class ClientConnection():
         def exit_code(self):
             return self._exit_code
 
+        @property
+        def id(self):
+            return self._id
+
         def next(self, timeout=0):
             assert not(self._done), "Server has already completed job..."
-            connection = _get_connection(self.__conn_id)
-            extra_list = list()
             response = None
             while(True):
                 try:
-                    msg = connection.recv_msg(timeout=timeout)
+                    msg = self.__connection.recv_msg(timeout=timeout)
                     if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and
-                       msg.request_id == self.__id and msg.msg_num == self.__curr_msg):
+                       msg.request_id == self._id and msg.msg_num == self.__curr_msg):
                         self.__curr_msg += 1
                         if(msg.type == MSGType.COMPLETE):
                             self._done = True
@@ -106,30 +110,24 @@ class ClientConnection():
                             response = msg.details
                         break
                     else:
-                        extra_list.append(msg)
+                        self.__connection.requeue_msg(msg)
+                        time.sleep(0)  # some other thread probably wanted that message...
                 except ZMQPairTimeout:
                     response = None
-            self.__return_list(connection, extra_list)
             return response
 
         def __find_ack(self, timeout=5):
-            connection = _get_connection(self.__conn_id)
-            extra_list = list()
             while(True):
                 try:
-                    msg = connection.recv_msg(timeout=5)
+                    msg = self.__connection.recv_msg(timeout=5)
                     if(msg.type == MSGType.ACKNOWLEDGE):
-                        self.__id = msg.request_id
+                        self._id = msg.request_id
                         break
                     else:
-                        extra_list.append(msg)
+                        self.__connection.requeue_msg(msg)
+                        time.sleep(0)  # some other thread probably wanted that message...
                 except ZMQPairTimeout:
                     raise ZMQPairTimeout("Slave did not acknowledge request in {}s".format(timeout))
-            self.__return_list(connection, extra_list)
-
-        def __return_list(self, connection, extra_list):
-            for extra in extra_list:
-                connection.requeue_msg(extra)
 
 
 def _new_connection(conn):

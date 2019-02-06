@@ -1,6 +1,9 @@
+import os
+import signal
 from subprocess import Popen, PIPE, STDOUT
 from threading import Thread
 from queue import Queue, Empty
+
 from ._decorators import timeout
 from .exceptions import ConsoleExecTimeout
 
@@ -8,7 +11,8 @@ from .exceptions import ConsoleExecTimeout
 class ConsoleExecutor():
     def __init__(self, cmd):
         self._cmd = cmd
-        self.__popen = Popen(cmd, stdout=PIPE, stderr=STDOUT, stdin=PIPE, universal_newlines=True, shell=False)
+        self.__popen = Popen(cmd, stdout=PIPE, stderr=STDOUT, stdin=PIPE, universal_newlines=True, shell=False,
+                             start_new_session=True)
         self.__queue = Queue()
         self.__bg_worker = Thread(target=ConsoleExecutor.__file_reader, args=(self.__queue, self.__popen.stdout),
                                   daemon=True)
@@ -46,9 +50,8 @@ class ConsoleExecutor():
             self.__popen.stdin.write(value + "\n")
             self.__popen.stdin.flush()
 
-    def kill(self, value):
-        self.__popen.kill()
-        self.__bg_worker.terminate()
+    def kill(self):
+        self.__popen.terminate()
 
     def __file_reader(queue, file):
         for line in iter(file.readline, ''):

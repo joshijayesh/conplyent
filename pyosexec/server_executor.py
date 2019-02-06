@@ -43,7 +43,7 @@ def register_executor_method(func):
     @wraps(func)
     def register_wrapper(zp, idx, *args, **kwargs):
         request = "{} {} {}".format(function_name, args, kwargs)
-        logger.info("Received Request: {}".format(request))
+        logger.info("Job {}: {}".format(idx, request))
         update_client(zp, idx, request)
 
         try:
@@ -66,15 +66,15 @@ def register_executor_method_bg(func):
 
     @wraps(func)
     def bg_server(zp, idx, args, kwargs):
-        print("NAME, ARGS {}, kwargs {}".format(args, kwargs))
-        request = "{} {} {}".format(function_name, args, kwargs)
-        logger.info("Received BG Request: {}".format(request))
+        request = "{} {} {}".format(function_name, args[1:], kwargs)
+        logger.info("Job {} BG: {}".format(idx, request))
         update_client(zp, idx, request)
 
         try:
             exit_code = func(zp, idx, *args, **kwargs)
         except Again:
             logger.info("Lost connection with host...")
+            _JOBS[idx] = None
             return
         except Exception:
             update_client(zp, idx, exception_to_str())
@@ -85,10 +85,11 @@ def register_executor_method_bg(func):
 
     @wraps(func)
     def register_wrapper(zp, idx, *args, **kwargs):
-        queue = Queue()
-        args = (queue,) + args
+        io_pipe_r, io_pipe_w = os.pipe()
+        my_queue = Queue()
+        args = (my_queue,) + args
         t = Thread(target=bg_server, args=(zp, idx, args, kwargs,), daemon=True)
-        _JOBS[idx] = (args, kwargs, queue)
+        _JOBS[idx] = (args, kwargs, my_queue)
         t.start()
 
     MSG_PORT[function_name] = register_wrapper
@@ -186,7 +187,7 @@ def wrfile(zp, idx, path, data, append=False):
         update_client(zp, idx, "wrfile: Path exists as a directory.")
         return -1
     else:
-        with open(path, "a" if append else "w") as file:
+        with open(path, "ab" if append else "wb") as file:
             if(append):
                 file.seek(0, 2)
             file.write(data)
@@ -217,7 +218,7 @@ def jobs(zp, idx):
         if(value is not None):
             output += "Running {}: {}\n".format(key, value[:2])
     if(output == ""):
-        output = "No _JOBS running."
+        output = "No jobs running."
     update_client(zp, idx, output)
     return 0
 
@@ -225,6 +226,45 @@ def jobs(zp, idx):
 @register_executor_method_bg
 def exec(zp, idx, queue, cmd):
     m_executor = ConsoleExecutor(cmd)
-    for line in iter(m_executor.read_output, None):
-        update_client(zp, idx, line.rstrip("\r\n"))
+    while(True):
+        line = m_executor.read_output(0.001)
+        if(line is not None):
+            update_client(zp, idx, line)
+        if(not(queue.empty())):
+            command = queue.get()
+            if(command["type"] == 0):
+                m_executor.send_input(command["value"])
+            elif(command["type"] == 1):
+                m_executor.kill()
+                break
     return 0
+
+
+@register_executor_method
+def send_input(zp, idx, job_num, value):
+    if(job_num in _JOBS):
+        for key, job_tuple in _JOBS.items():
+            if(key == job_num):
+                if(job_tuple is None):
+                    update_client(zp, idx, "Job does not exist or has already completed...")
+                    return -1
+                job_tuple[2].put({"type": 0, "value": value})
+                update_client(zp, idx, "Sent value to job {}".format(job_num))
+    else:
+        update_client(zp, idx, "Job does not exist or has already completed...")
+        return -1
+
+
+@register_executor_method
+def kill(zp, idx, job_num):
+    if(job_num in _JOBS):
+        for key, job_tuple in _JOBS.items():
+            if(key == job_num):
+                if(job_tuple is None):
+                    update_client(zp, idx, "Job does not exist or has already completed...")
+                    return -1
+                job_tuple[2].put({"type": 1})
+                update_client(zp, idx, "Sent kill command to job {}".format(job_num))
+    else:
+        update_client(zp, idx, "Job does not exist or has already completed...")
+        return -1
