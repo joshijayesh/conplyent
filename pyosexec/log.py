@@ -10,9 +10,9 @@ def disable_logger():
     logger.setLevel(logging.WARNING)
 
 
-def enable_logger(level):
+def enable_logger(level=logging.DEBUG):
     logger.setLevel(level)
 
 
 logger = logging.getLogger("pyosexec")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
