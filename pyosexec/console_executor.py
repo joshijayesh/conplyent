@@ -1,8 +1,6 @@
-import os
-import signal
 from subprocess import Popen, PIPE, STDOUT
 from threading import Thread
-from queue import Queue, Empty
+from queue import Queue
 
 from ._decorators import timeout
 from .exceptions import ConsoleExecTimeout
@@ -19,6 +17,9 @@ class ConsoleExecutor():
         self.__bg_worker.start()
         self._alive = True
 
+    def __del__(self):
+        self.close()
+
     @property
     def cmd(self):
         return self._cmd
@@ -33,16 +34,16 @@ class ConsoleExecutor():
 
     def read_output(self, timeout=None):
         while(True):
-            try:
-                if(self.alive):
-                    self.__poll_queue(timeout=timeout, exception=ConsoleExecTimeout)
-                    if(self.__queue.empty()):
-                        return None
-                    else:
-                        return self.__queue.get(timeout=1)  # should never halt here...
-                else:
+            if(self.alive):
+                self.__poll_queue(timeout=timeout, exception=ConsoleExecTimeout)
+                if(self.__queue.empty()):
+                    if(not(self.alive)):
+                        self.__popen.wait()
                     return None
-            except (Empty, ConsoleExecTimeout):
+                else:
+                    return self.__queue.get(timeout=1)  # should never halt here...
+            else:
+                self.__popen.wait()
                 return None
 
     def send_input(self, value):
@@ -52,6 +53,13 @@ class ConsoleExecutor():
 
     def kill(self):
         self.__popen.terminate()
+        self.__popen.wait()
+
+    def close(self):
+        if(self.alive):
+            self.kill()
+        self.__popen.stdin.close()
+        self.__popen.stdout.close()
 
     def __file_reader(queue, file):
         for line in iter(file.readline, ''):
