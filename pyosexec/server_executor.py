@@ -19,7 +19,7 @@ _JOBS = SynchronizedDict()
 _MSG_NUM = {}  # Ensures that MSG queue in client can be properly ordered
 
 
-def start():
+def start_server():
     zp = ZMQPair()
     zp.bind()
     idx = 0

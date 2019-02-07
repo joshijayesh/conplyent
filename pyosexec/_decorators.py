@@ -7,9 +7,9 @@ def timeout(_func=None, name="Timeout"):
         @wraps(func)
         def timeout_wrapper(*args, **kwargs):
             if("timeout" in kwargs and kwargs["timeout"] is not None):
-                start_time = time.clock()
+                start_time = time.perf_counter()
                 for none in func(*args, **kwargs):
-                    time_taken = time.clock() - start_time
+                    time_taken = time.perf_counter() - start_time
                     if(time_taken > kwargs["timeout"]):
                         raise kwargs["exception"]("{} did not complete in {}s".format(name, time_taken))
                     time.sleep(0.001)

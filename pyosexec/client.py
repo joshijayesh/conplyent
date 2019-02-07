@@ -9,9 +9,12 @@ from .log import logger
 _pool = local()
 
 
-def add(hostname, port=8001):
-    new_pair = ZMQPair(hostname, port)
-    return ClientConnection(_new_connection(new_pair))
+def add_client(hostname, port=8001):
+    try:
+        connection = _get_connection("{}:{}".format(hostname, port))
+    except RuntimeError:
+        connection = ClientConnection(_new_connection(ZMQPair(dest_ip=hostname, port=port)))
+    return connection
 
 
 def _wrap_server_methods(cls, name):
