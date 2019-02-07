@@ -140,12 +140,15 @@ class ZMQPair(object):
 
     def __bg_receiver(queue, socket):
         logger.debug("Thread:: Starting")
-        while(True):
-            while(not(socket.poll(timeout=1, flags=zmq.POLLIN))):
-                time.sleep(0)
-            msg = socket.recv_pyobj()
-            logger.debug("Thread:: {}".format(str(msg)))
-            if(msg.request and msg.type == MSGType.HEARTBEAT):
-                socket.send_pyobj(MSG(MSGType.HEARTBEAT, request=False))
-            else:
-                queue.put(msg)
+        try:
+            while(True):
+                while(not(socket.poll(timeout=1, flags=zmq.POLLIN))):
+                    time.sleep(0)
+                msg = socket.recv_pyobj()
+                logger.debug("Thread:: {}".format(str(msg)))
+                if(msg.request and msg.type == MSGType.HEARTBEAT):
+                    socket.send_pyobj(MSG(MSGType.HEARTBEAT, request=False))
+                else:
+                    queue.put(msg)
+        except zmq.ZMQError:
+            pass
