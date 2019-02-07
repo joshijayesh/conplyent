@@ -1,4 +1,5 @@
 __pycache__/*
 *.pyc
 pysosexec.egg-info/*
-.coverage/*
+.coverage
+*egg-info/*
