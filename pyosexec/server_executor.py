@@ -9,7 +9,7 @@ from queue import Queue
 from ._zmq_pair import ZMQPair
 from ._msg import MSGType, MSG
 from ._general import SynchronizedDict
-from .exceptions import exception_to_str
+from .exceptions import exception_to_str, ConsoleExecTimeout
 from .console_executor import ConsoleExecutor
 from .log import logger
 
@@ -30,6 +30,8 @@ def start_server():
             if(msg.type == MSGType.COMMAND):
                 zp.send_msg(MSG(MSGType.ACKNOWLEDGE, request_id=idx))
                 MSG_PORT[msg.cmd_id](zp, idx, *msg.args, **msg.kwargs)
+                if(msg.cmd_id == "close_server"):
+                    return 0
                 idx = (idx + 1) % 0xFFFFFFFF
             elif(msg.type == MSGType.SYNC):
                 zp.send_msg(MSG(MSGType.SYNC, args=(list(MSG_PORT.keys()),)))
@@ -190,7 +192,7 @@ def wrfile(zp, idx, path, data, append=False):
         with open(path, "ab" if append else "wb") as file:
             if(append):
                 file.seek(0, 2)
-            file.write(data)
+            file.write(data.encode("utf-8") if type(data) is str else data)
         update_client(zp, idx, "Finished writing data to {}".format(path))
         return 0
 
@@ -216,7 +218,7 @@ def jobs(zp, idx):
     output = ""
     for key, value in _JOBS.items():
         if(value is not None):
-            output += "Running {}: {}\n".format(key, value[:2])
+            output += "Running {}: {}\n".format(key, value[:3])
     if(output == ""):
         output = "No jobs running."
     update_client(zp, idx, output)
@@ -226,10 +228,13 @@ def jobs(zp, idx):
 @register_executor_method_bg
 def exec(zp, idx, queue, cmd):
     m_executor = ConsoleExecutor(cmd)
-    while(True):
-        line = m_executor.read_output(0.001)
-        if(line is not None):
-            update_client(zp, idx, line)
+    while(m_executor.alive):
+        try:
+            line = m_executor.read_output(0.01)
+            if(line is not None):
+                update_client(zp, idx, line)
+        except ConsoleExecTimeout:
+            pass
         if(not(queue.empty())):
             command = queue.get()
             if(command["type"] == 0):
@@ -268,3 +273,14 @@ def kill(zp, idx, job_num):
     else:
         update_client(zp, idx, "Job does not exist or has already completed...")
         return -1
+
+
+@register_executor_method
+def close_server(zp, idx):
+    for key, job_tuple in _JOBS.items():
+        if(job_tuple is not None):
+            job_tuple[2].put({"type": 1})
+            update_client(zp, idx, "Killing job {}".format(key))
+
+    update_client(zp, idx, "Closing Server")
+    return 0
