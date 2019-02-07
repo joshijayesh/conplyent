@@ -1,19 +1,18 @@
 from threading import local
 import time
+import inspect
 
 from ._zmq_pair import ZMQPair
 from ._msg import MSG, MSGType
-from .exceptions import ZMQPairTimeout
+from .exceptions import ZMQPairTimeout, ClientTimeout
 from .log import logger
+from ._decorators import timeout
 
 _pool = local()
 
 
 def add_client(hostname, port=8001):
-    try:
-        connection = _get_connection("{}:{}".format(hostname, port))
-    except RuntimeError:
-        connection = ClientConnection(_new_connection(ZMQPair(dest_ip=hostname, port=port)))
+    connection = ClientConnection(_new_connection(ZMQPair(dest_ip=hostname, port=port)))
     return connection
 
 
@@ -46,11 +45,17 @@ class ClientConnection():
         connection.close()
         logger.info("Closing connection to {}".format(self.__conn_id))
 
+    def server_commands(self):
+        commands = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
+        return list(filter(lambda k: not (k[0] == "_" or k in ["server_commands", "close", "connect"]), commands))
+
     def _command_generic(self, cmd_id, *args, timeout=None, complete=True, **kwargs):
         listener = self.__send_command(cmd_id, timeout=timeout, *args, **kwargs)
         if(complete):
+            output = list()
             for response in iter(listener.next, None):
-                logger.info("<Server> {}".format(response))
+                output.append(response)
+            return output
         else:
             return listener
 
@@ -84,6 +89,12 @@ class ClientConnection():
             self._exit_code = None
             self.__curr_msg = 0
 
+        def __enter__(self):
+            pass
+
+        def __exit__(self):
+            pass
+
         @property
         def done(self):
             return self._done
@@ -96,28 +107,31 @@ class ClientConnection():
         def id(self):
             return self._id
 
-        def next(self, timeout=0):
+        def next(self, timeout=None):
+            self.__response = None
             assert not(self._done), "Server has already completed job..."
-            response = None
-            while(True):
-                try:
-                    msg = self.__connection.recv_msg(timeout=timeout)
-                    if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and
-                       msg.request_id == self._id and msg.msg_num == self.__curr_msg):
-                        self.__curr_msg += 1
-                        if(msg.type == MSGType.COMPLETE):
-                            self._done = True
-                            response = None
-                            self._exit_code = msg.exit_code
-                        else:
-                            response = msg.details
-                        break
-                    else:
-                        self.__connection.requeue_msg(msg)
-                        time.sleep(0)  # some other thread probably wanted that message...
-                except ZMQPairTimeout:
-                    response = None
-            return response
+            try:
+                self.__receive_message(timeout=timeout, exception=ClientTimeout)
+            except (ZMQPairTimeout, ClientTimeout):
+                pass
+            return self.__response
+
+        @timeout(name="Listening")
+        def __receive_message(self, *args, **kwargs):
+            msg = self.__connection.recv_msg(timeout=kwargs["timeout"])
+            if((msg.type == MSGType.COMPLETE or msg.type == MSGType.DETAILS) and
+               msg.request_id == self._id and msg.msg_num == self.__curr_msg):
+                self.__curr_msg += 1
+                if(msg.type == MSGType.COMPLETE):
+                    self._done = True
+                    self.__response = None
+                    self._exit_code = msg.exit_code
+                else:
+                    self.__response = msg.details
+                return
+            else:
+                self.__connection.requeue_msg(msg)
+                yield None
 
         def __find_ack(self, timeout=5):
             while(True):
