@@ -9,7 +9,7 @@ from queue import Queue
 from ._zmq_pair import ZMQPair
 from ._msg import MSGType, MSG
 from ._general import SynchronizedDict
-from .exceptions import exception_to_str, ConsoleExecTimeout
+from .exceptions import min_exception_to_str, ConsoleExecTimeout
 from .console_executor import ConsoleExecutor
 from .log import logger
 
@@ -31,11 +31,13 @@ def start_server():
                 zp.send_msg(MSG(MSGType.ACKNOWLEDGE, request_id=idx))
                 MSG_PORT[msg.cmd_id](zp, idx, *msg.args, **msg.kwargs)
                 if(msg.cmd_id == "close_server"):
+                    zp.close()
                     return 0
                 idx = (idx + 1) % 0xFFFFFFFF
             elif(msg.type == MSGType.SYNC):
                 zp.send_msg(MSG(MSGType.SYNC, args=(list(MSG_PORT.keys()),)))
         except Again:
+            print("LOST")
             logger.info("Lost connection with host...")
 
 
@@ -54,9 +56,8 @@ def register_executor_method(func):
             logger.info("Lost connection with host...")
             return
         except Exception:
-            update_client(zp, idx, exception_to_str())
+            update_client(zp, idx, min_exception_to_str())
             exit_code = 1
-
         zp.send_msg(MSG(MSGType.COMPLETE, request_id=idx, exit_code=exit_code, msg_num=_MSG_NUM[idx]))
 
     MSG_PORT[function_name] = register_wrapper
@@ -79,7 +80,7 @@ def register_executor_method_bg(func):
             _JOBS[idx] = None
             return
         except Exception:
-            update_client(zp, idx, exception_to_str())
+            update_client(zp, idx, min_exception_to_str())
             exit_code = 1
 
         zp.send_msg(MSG(MSGType.COMPLETE, request_id=idx, exit_code=exit_code, msg_num=_MSG_NUM[idx]))
@@ -91,7 +92,7 @@ def register_executor_method_bg(func):
         my_queue = Queue()
         args = (my_queue,) + args
         t = Thread(target=bg_server, args=(zp, idx, args, kwargs,), daemon=True)
-        _JOBS[idx] = (args, kwargs, my_queue)
+        _JOBS[idx] = (my_queue, t, args[1:], kwargs)
         t.start()
 
     MSG_PORT[function_name] = register_wrapper
@@ -218,7 +219,7 @@ def jobs(zp, idx):
     output = ""
     for key, value in _JOBS.items():
         if(value is not None):
-            output += "Running {}: {}\n".format(key, value[:3])
+            output += "Running {}: {}\n".format(key, value[2:])
     if(output == ""):
         output = "No jobs running."
     update_client(zp, idx, output)
@@ -248,13 +249,11 @@ def exec(zp, idx, queue, cmd):
 @register_executor_method
 def send_input(zp, idx, job_num, value):
     if(job_num in _JOBS):
-        for key, job_tuple in _JOBS.items():
-            if(key == job_num):
-                if(job_tuple is None):
-                    update_client(zp, idx, "Job does not exist or has already completed...")
-                    return -1
-                job_tuple[2].put({"type": 0, "value": value})
-                update_client(zp, idx, "Sent value to job {}".format(job_num))
+        if(_JOBS[job_num] is None):
+            update_client(zp, idx, "Job does not exist or has already completed...")
+            return -1
+        _JOBS[job_num][0].put({"type": 0, "value": value})
+        update_client(zp, idx, "Sent value to job {}".format(job_num))
     else:
         update_client(zp, idx, "Job does not exist or has already completed...")
         return -1
@@ -268,7 +267,7 @@ def kill(zp, idx, job_num):
                 if(job_tuple is None):
                     update_client(zp, idx, "Job does not exist or has already completed...")
                     return -1
-                job_tuple[2].put({"type": 1})
+                job_tuple[0].put({"type": 1})
                 update_client(zp, idx, "Sent kill command to job {}".format(job_num))
     else:
         update_client(zp, idx, "Job does not exist or has already completed...")
@@ -279,8 +278,9 @@ def kill(zp, idx, job_num):
 def close_server(zp, idx):
     for key, job_tuple in _JOBS.items():
         if(job_tuple is not None):
-            job_tuple[2].put({"type": 1})
+            job_tuple[0].put({"type": 1})
             update_client(zp, idx, "Killing job {}".format(key))
+            job_tuple[1].wait()
 
     update_client(zp, idx, "Closing Server")
     return 0

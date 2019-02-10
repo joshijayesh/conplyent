@@ -1,18 +1,16 @@
 import os
+import time
 from unittest import TestCase, main
 
 import pyosexec
-import tracemalloc
-
-tracemalloc.start()
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 
-class TestServer(TestCase):
+class TestThorough(TestCase):
     @classmethod
     def setUp(self):
-        self._client = pyosexec.ConsoleExecutor("python start_client.py")
+        self._client = pyosexec.ConsoleExecutor("python thorough_client.py")
 
     @classmethod
     def tearDown(self):
@@ -21,6 +19,7 @@ class TestServer(TestCase):
     def test_server(self):
         result = pyosexec.start_server()
         self.assertEqual(result, 0)
+        time.sleep(2)
 
 
 if(__name__ == '__main__'):

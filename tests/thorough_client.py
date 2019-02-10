@@ -1,4 +1,7 @@
+import logging
 import pyosexec
+
+logging.basicConfig(level=logging.INFO)
 
 
 client_connection = pyosexec.add_client("localhost")
@@ -40,6 +43,7 @@ client_connection.jobs()
 client_connection.exec("python multiple_output.py 2")
 listener = client_connection.exec("python wait_input.py", complete=False)
 client_connection.jobs()
+client_connection.ls()
 while(True):
     if(listener.next(0.5) is None):
         break

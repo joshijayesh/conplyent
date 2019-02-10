@@ -36,6 +36,7 @@ class ZMQPair(object):
         self._port = port
         self._connected = False
         self.__queue = Queue()
+        self.__msg_backlog = {}
         self.__bg_worker = Thread(target=ZMQPair.__bg_receiver, args=(self.__queue, self._socket), daemon=True)
         self.__bg_worker.start()
 
@@ -97,14 +98,19 @@ class ZMQPair(object):
             self._connected = False
             return False
 
-    def recv_msg(self, timeout=None):
+    def recv_msg(self, timeout=None, msg_id=None):
+        if(msg_id is not None and msg_id in self.__msg_backlog and self.__msg_backlog[msg_id]):
+            return self.__msg_backlog[msg_id].pop(0)
         self.__check_mail(timeout=timeout, exception=ZMQPairTimeout)
         mail = self.__queue.get(timeout=10)
         logger.debug("Main:: Retrieved Message: {}".format(str(mail)))
         return mail
 
     def requeue_msg(self, msg):
-        self.__queue.put(msg)
+        if(msg.has_request_id()):
+            self.__msg_backlog.setdefault(msg.request_id, list()).append(msg)
+        else:
+            self.__queue.put(msg)
 
     def pulse(self, timeout=None):
         return self.__heartbeat(timeout=timeout)

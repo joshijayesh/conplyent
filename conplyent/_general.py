@@ -9,7 +9,7 @@ class SynchronizedDict(dict):
     def __getitem__(self, key):
         self.__lock.acquire()
         try:
-            super(SynchronizedDict, self).__getitem__(key)
+            return super(SynchronizedDict, self).__getitem__(key)
         finally:
             self.__lock.release()
 

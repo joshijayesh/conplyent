@@ -1,4 +1,3 @@
-from .log import set_logger, disable_logger, enable_logger
 from .console_executor import ConsoleExecutor
 from .exceptions import ConsoleExecTimeout
 

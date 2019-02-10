@@ -57,3 +57,6 @@ class MSG(object):
     @property
     def msg_num(self):
         return self._kwargs["msg_num"]
+
+    def has_request_id(self):
+        return "request_id" in self._kwargs
