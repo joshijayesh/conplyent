@@ -114,6 +114,7 @@ class ClientConnection():
     def __init__(self, conn_id):
         self.__conn_id = conn_id
         self.__synced = False
+        self.__initial_methods = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
 
     def connect(self, timeout=None):
         '''
@@ -184,8 +185,7 @@ class ClientConnection():
             established. Otherwise will return nothing.
         '''
         commands = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
-        return list(filter(lambda k: not (k[0] == "_" or k in [
-            "server_methods", "close", "connect", "disconnect", "heartbeat"]), commands))
+        return list(filter(lambda k: not (k[0] == "_" or k in self.__initial_methods), commands))
 
     def heartbeat(self, timeout=None):
         '''
