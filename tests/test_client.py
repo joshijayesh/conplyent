@@ -1,15 +1,14 @@
 import os
 from unittest import TestCase, main
 
-import pyosexec
-from pyosexec import server_executor
+import conplyent
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 
 def setUpModule():
     global server
-    server = pyosexec.ConsoleExecutor("python start_server.py")
+    server = conplyent.ConsoleExecutor("python start_server.py")
 
 
 def tearDownModule():
@@ -19,7 +18,7 @@ def tearDownModule():
 class TestClient(TestCase):
     @classmethod
     def setUp(self):
-        self._client_connection = pyosexec.add_client("localhost")
+        self._client_connection = conplyent.client.add("localhost")
 
     @classmethod
     def tearDown(self):
@@ -29,9 +28,9 @@ class TestClient(TestCase):
 class TestSimpleCommands(TestClient):
     def test_client_retrieved_commands(self):
         self._client_connection.connect()
-        server_commands = self._client_connection.server_commands()
+        server_commands = self._client_connection.server_methods()
         for command in server_commands:
-            self.assertIn(command, server_executor.MSG_PORT.keys())
+            self.assertIn(command, conplyent.MSG_PORT.keys())
 
     def test_cd_cwd(self):
         self._client_connection.connect()
@@ -45,7 +44,7 @@ class TestSimpleCommands(TestClient):
     def test_ls(self):
         self._client_connection.connect()
         output = self._client_connection.ls()
-        self.assertIn("f .\\test_client.py", output[1])
+        self.assertIn("f test_client.py", output[1])
 
 
 if(__name__ == "__main__"):

@@ -1,10 +1,7 @@
-import logging
-import pyosexec
-
-logging.basicConfig(level=logging.INFO)
+import conplyent
 
 
-client_connection = pyosexec.add_client("localhost")
+client_connection = conplyent.client.add("localhost")
 client_connection.connect()
 
 
@@ -36,8 +33,8 @@ client_connection.wrfile("some_file.txt", "some data")
 client_connection.wrfile("some_file.txt", "some data", append=True)
 client_connection.rm("some_file.txt")
 
-client_connection.cat("test_console_executor.py")
-client_connection.cat("no existing file")
+client_connection.rdfile("test_console_executor.py")
+client_connection.rdfile("no existing file")
 
 client_connection.jobs()
 client_connection.exec("python multiple_output.py 2")

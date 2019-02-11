@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase, main
 
-from pyosexec import ConsoleExecutor, ConsoleExecTimeout
+from conplyent import ConsoleExecutor, ConsoleExecTimeout
 
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -78,7 +78,7 @@ class TestPausedOutput(TestConsoleExecutor):
             while(True):
                 self._console_executor.read_output(timeout=0.005)
 
-        self.assertTrue("Polling Queue" in str(context.exception))
+        self.assertTrue("Polling Subprocess" in str(context.exception))
 
     def test_kill(self):
         '''
