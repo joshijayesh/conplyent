@@ -80,6 +80,7 @@ def start(port=8001):
 
     _zmq_pair = ZMQPair(port=port)
     _zmq_pair.bind()
+    logger.info("SERVER START:: Begin listening on port {}".format(port))
     idx = 0
 
     while(True):
