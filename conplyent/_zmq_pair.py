@@ -5,31 +5,16 @@ from queue import Queue
 
 from ._msg import MSG, MSGType
 from ._decorators import timeout
+from ._general import logger
 from .exceptions import ZMQPairTimeout
-from .log import logger
 
 
 _ctx = local()
 
 
-def get_context():
-    try:
-        return getattr(_ctx, "zmq_context")
-    except (AttributeError, IndexError):
-        _ctx.__dict__["zmq_context"] = zmq.Context()
-        return _ctx.zmq_context
-
-
-def close_context():
-    try:
-        getattr(_ctx, "zmq_context").term()
-    except (AttributeError, IndexError):
-        pass  # No need to close context?
-
-
 class ZMQPair(object):
     def __init__(self, dest_ip=None, port=8001):
-        self._context = get_context()
+        self._context = _get_context()
         self._socket = self._context.socket(zmq.PAIR)
         self._socket.setsockopt(zmq.LINGER, 0)
         self._dest_ip = dest_ip
@@ -107,8 +92,9 @@ class ZMQPair(object):
         return mail
 
     def requeue_msg(self, msg):
-        if(msg.has_request_id()):
+        if(not(msg.type == MSGType.ACKNOWLEDGE and msg.has_request_id())):
             self.__msg_backlog.setdefault(msg.request_id, list()).append(msg)
+            logger.debug("Putting MSG to backlog {}".format(msg))
         else:
             self.__queue.put(msg)
 
@@ -158,3 +144,18 @@ class ZMQPair(object):
                     queue.put(msg)
         except zmq.ZMQError:
             pass
+
+
+def _get_context():
+    try:
+        return getattr(_ctx, "zmq_context")
+    except (AttributeError, IndexError):
+        _ctx.__dict__["zmq_context"] = zmq.Context()
+        return _ctx.zmq_context
+
+
+def _close_context():
+    try:
+        getattr(_ctx, "zmq_context").term()
+    except (AttributeError, IndexError):
+        pass  # No need to close context?
