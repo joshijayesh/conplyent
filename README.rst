@@ -16,4 +16,5 @@ Requirements
 Conplyent is currently only supported in Python 3.4.3+... Python2 support not planned in the near future.
 
 PyZMQ -- https://github.com/zeromq/pyzmq
+
 Click -- https://github.com/pallets/click
