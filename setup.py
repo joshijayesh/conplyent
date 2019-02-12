@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="conplyent",
-    version="0.0.2",
+    version="0.0.4",
     license="MIT",
     author="Jayesh Joshi",
     author_email="jayeshjo1@utexas.edu",
@@ -18,4 +18,5 @@ setup(
             "conplyent=conplyent_scripts.cli:cli"
         ],
     },
+    python_requires=">=3.4.3",
 )
