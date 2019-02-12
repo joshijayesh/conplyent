@@ -78,9 +78,9 @@ class ClientConnection():
 
     >>> TypeError('chdir: path should be string, bytes or os.PathLike, not int')
 
-    When using these server methods, users can provide two additional kwargs to
-    the method that are processed client side. These are "timeout" and
-    "complete".
+    When using these server methods, users can provide three additional kwargs
+    to the method that are processed client side. These are "timeout",
+    "complete", and "echo_response".
 
     Timeout defines the amount of time that we want to wait for the send command
     to go through. This could come into play for scenarios where you have a
@@ -109,6 +109,9 @@ class ClientConnection():
     >>> ... do something else ...
     >>> for response in iter(listener.next, None):
     >>>     ... do something with response ...
+
+    Echo Response will simply print to stdout the response in real time. This
+    can be useful when users have enabled complete.
     '''
 
     def __init__(self, conn_id):
@@ -204,12 +207,14 @@ class ClientConnection():
         connection = _get_connection(self.__conn_id)
         return connection.pulse(timeout=timeout)
 
-    def _command_server(self, cmd_id, *args, timeout=None, complete=True, **kwargs):
+    def _command_server(self, cmd_id, *args, timeout=None, complete=True, echo_response=False, **kwargs):
         listener = self.__send_command(cmd_id, timeout=timeout, *args, **kwargs)
         if(complete):
             output = list()
             for response in iter(listener.next, None):
                 output.append(response)
+                if(echo_response):
+                    print(response)
             return output
         else:
             return listener
