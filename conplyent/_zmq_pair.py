@@ -137,6 +137,14 @@ class ZMQPair(object):
                 while(not(socket.poll(timeout=1, flags=zmq.POLLIN))):
                     time.sleep(0)
                 msg = socket.recv_pyobj()
+                if(msg.type == MSGType.ACKNOWLEDGE and msg.request_id == 0):  # if server reset, clear out older msgs
+                    queue_return = []
+                    while(not(queue.empty())):
+                        msg = queue.get()
+                        if(msg.type == MSGType.HEARTBEAT or msg.type == MSGType.SYNC):
+                            queue_return.append(msg)
+                    while(queue_return):
+                        queue.put(queue_return.pop(0))
                 logger.debug("Thread:: {}".format(str(msg)))
                 if(msg.request and msg.type == MSGType.HEARTBEAT):
                     socket.send_pyobj(MSG(MSGType.HEARTBEAT, request=False))
