@@ -5,3 +5,4 @@ pysosexec.egg-info/*
 *egg-info/*
 dist/*
 build/*
+docs/build/html
