@@ -45,9 +45,6 @@ class ConsoleExecutor():
         self.__bg_worker.start()
         self._alive = True
 
-    def __del__(self):
-        self.close()  # make sure we terminate popen and close up the fds
-
     @property
     def cmd(self):
         '''
@@ -96,17 +93,23 @@ class ConsoleExecutor():
         :raises ConsoleExecTimeout: If user specifies a non-None/non-Negative
             timeout and subprocess has not responded in time.
         '''
+        if(not(self.__queue.empty())):
+            return self.__queue.get()
         while(True):
             if(self.alive):
                 self.__poll_queue(timeout=timeout, exception=ConsoleExecTimeout)
                 if(self.__queue.empty()):
                     if(not(self.alive)):
                         self.__popen.wait()
+                        if(not(self.__queue.empty())):
+                            return self.__queue.get()
                     return None
                 else:
                     return self.__queue.get()  # should never halt here...
             else:
                 self.__popen.wait()
+                if(not(self.__queue.empty())):
+                    return self.__queue.get()
                 return None
 
     def send_input(self, value, new_line=True):
@@ -153,6 +156,6 @@ class ConsoleExecutor():
             yield None
 
     def __file_reader(queue, file):
-        for line in iter(file.readline, ''):
+        for line in iter(file.readline, b''):
             queue.put(line)
         file.close()
