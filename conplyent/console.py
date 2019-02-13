@@ -156,6 +156,6 @@ class ConsoleExecutor():
             yield None
 
     def __file_reader(queue, file):
-        for line in iter(file.readline, b''):
+        for line in iter(file.readline, b'' or ''):
             queue.put(line)
         file.close()
