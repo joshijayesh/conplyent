@@ -31,20 +31,30 @@ def _install_windows(port):
 
 
 def _install_linux(port):
-    print("Detected Linux OS")
+    import lsb_release
+    release = lsb_release.get_lsb_information()["RELEASE"]
+    print("Detected Linux OS {}".format(release))
+    if(not(release[:2] == "16" or release[:2] == "18")):
+        print("Linux OS not currently supported for installation")
+        return
     print("Installing conplyent server listening to port # {}".format(port))
-    ch = conplyent.ConsoleExecutor("whereis conplyent", shell=True)
-    ptr = "conplyent"
-    output = ch.read_output().decode("utf-8")
-    match = re.search(r"conplyent: (.*)", output)
-    if(match):
-        ptr = match.group(1)
-    file_name = "/etc/init.d/conplyent_{}.sh".format(port)
-    with open(file_name, "w") as file:
-        file.write("{} start-server --port {}".format(ptr, port))
-    os.system("chmod +x {}".format(file_name))
-    os.system("ln -s {} /etc/rc2.d/conplyent_{}.sh".format(file_name, port))
-    os.system("update-rc.d conplyent_{}.sh defaults".format(port))
+
+    if(not(os.path.isdir("/usr/bin/conplyent"))):
+        os.mkdir("/usr/bin/conplyent")
+
+    with open("/usr/bin/conplyent/conplyent_{}.sh".format(port), "w") as file:
+        file.write("#!/bin/sh\nconplyent start-server --port {}".format(port))
+
+    os.system("chmod +x /usr/bin/conplyent/conplyent_{}.sh".format(port))
+
+    with open("/etc/systemd/system/conplyent_{}.service".format(port), "w") as file:
+        file.write("[Service]\nExecStart=/usr/bin/conplyent/conplyent_{}.sh\n\n".format(port))
+        file.write("[Install]\nWantedBy=default.target")
+
+    os.system("chmod 664 /etc/systemd/system/conplyent_{}.service".format(port))
+    os.system("systemctl enable conplyent_{}.service".format(port))
+
+    print("Done")
 
 
 def _parse_args(arg_list):
