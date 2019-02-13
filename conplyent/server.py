@@ -9,7 +9,7 @@ from glob import glob
 from functools import wraps
 from shutil import rmtree
 from threading import Thread
-from zmq import Again
+from zmq import Again, ZMQError
 from queue import Queue
 
 from ._zmq_pair import ZMQPair
@@ -199,18 +199,20 @@ def register_background_command(func):
         request = "{} {} {}".format(function_name, args[1:], kwargs)
         logger.info("Job {} BG: {}".format(idx, request))
         update_client(idx, request)
-
         try:
-            exit_code = func(idx, *args, **kwargs)
-        except Again:
-            logger.info("Lost connection with host...")
-            JOBS[idx] = None
-            return
-        except Exception:
-            update_client(idx, min_exception_to_str())
-            exit_code = ERROR
+            try:
+                exit_code = func(idx, *args, **kwargs)
+            except Again:
+                logger.info("Lost connection with host...")
+                JOBS[idx] = None
+                return
+            except Exception:
+                update_client(idx, min_exception_to_str())
+                exit_code = ERROR
 
-        _zmq_pair.send_msg(MSG(MSGType.COMPLETE, request_id=idx, exit_code=exit_code, msg_num=_msg_num[idx]))
+            _zmq_pair.send_msg(MSG(MSGType.COMPLETE, request_id=idx, exit_code=exit_code, msg_num=_msg_num[idx]))
+        except ZMQError:
+            pass  # Client may have disconnected
         JOBS[idx] = None
 
     @wraps(func)
@@ -570,9 +572,13 @@ def exec(idx, queue, cmd):
             if(command["type"] == INPUT):
                 m_executor.send_input(command["value"])
             elif(command["type"] == KILL):
-                m_executor.kill()
+                m_executor.close()
                 break
-    update_client(idx, "Exiting...")
+    m_executor.close()
+    try:
+        update_client(idx, "Exiting...")
+    except ZMQError:
+        pass  # could occur if clients already disconnected.
     return SUCCESS
 
 

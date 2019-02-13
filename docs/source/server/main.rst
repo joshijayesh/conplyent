@@ -39,7 +39,7 @@ The default command set comes with commands that can be executed remotely to pro
 * shutdown -- Issues a shutdown to OS.
 
 Custom Commands
-===============
+---------------
 
 Conplyent server is built on the premise of simple additions of new commands. There are two types of commands: foreground commands, and background commands. For tasks that are relatively quick and won't hold down the server, these should be used as foreground commands. For tasks that will take an unknown amount of time or are IO bound, these should be run in the background. For the Conplyent Shell, only exec is implemented as a background command.
 
@@ -62,3 +62,8 @@ Command echo now can be used from the client, both from python scripts and the c
 >>> Enter command: echo hi
 >>> echo ('hi',) {}
 >>> hi
+
+Conplyent Extensions
+--------------------
+
+Planning to add extension files to conplyent which can interface other open source libraries, like pyautogui, and ability to start servers using these extensions easily.

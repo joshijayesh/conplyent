@@ -14,7 +14,7 @@ class TestThorough(TestCase):
 
     @classmethod
     def tearDown(self):
-        self._client.kill()
+        self._client.close()
 
     def test_server(self):
         result = conplyent.server.start()
