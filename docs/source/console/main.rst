@@ -1,4 +1,6 @@
 Console
 =======
 
-Some
+Conplyent provides a ConsoleExecutor class which serves as a wrapper around running commands on the sytem. These commands are not meant to be used on top of the shell that is provided in the system but users have the option to run it on shell mode if desired (see API). Running on shell mode makes this a hugely limited process, and is not used by default in the main conplyent server.
+
+ConsoleExecutor provides the means to run these commands as a background task so that the main python process is not IO bound. To acheive this, ConsoleExecutor spawns a python daemon thread that is continously listening to any output from the background process and updates a data structure accessible by the main processes. In python, since threads are green threads, these threads will only be functional when the main python process gives up control. Still, any activity on the pipes will be guaranteed to be received so the main process can listen in to the pipes to check for activity at any point.
