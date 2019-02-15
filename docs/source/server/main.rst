@@ -4,7 +4,7 @@ Server
 Conplyent provides a client/server connection for running distributed applications. The purpose of this server is to create a compliant system that provides many universal commands that is os-independent, in term creating its own shell, and also allowing clients to run commands on the system. This is primarily created for automation processes where we can simply install a conplyent server on a system and set it up to run on startup so that clients can remotely connect to the system and run commands. This server is purely built on top of python so the only pre-requirement for the system under test is to install python and pip.
 
 Conplyent Shell
-===============
+---------------
 
 The default command set comes with commands that can be executed remotely to provide some form of shell-like activity. These are also written completely in python so they are os-independent and follow the naming convention similar to UNIX rather than DOS. These commands are listed below, see API for details on usage. These default set may be expanded in the future to provide more accessibility.
 

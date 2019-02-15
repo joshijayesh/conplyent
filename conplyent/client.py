@@ -143,7 +143,7 @@ class ClientConnection():
         connection = _get_connection(self.__conn_id)
         connection.connect()
         if(timeout):
-            logger.info("Waiting {}s for {} to respond...".format(self.__conn_id))
+            logger.info("Waiting {}s for {} to respond...".format(timeout, self.__conn_id))
         else:
             logger.info("Waiting for {} to respond...".format(self.__conn_id))
         if(not(connection.pulse(timeout))):
@@ -327,7 +327,7 @@ class ClientConnection():
             try:
                 self.__receive_message(timeout=timeout, exception=ClientTimeout)
             except (ZMQPairTimeout):
-                pass
+                raise ClientTimeout("Server did not respond in {} s".format(timeout))
             return self.__response
 
         @timeout(name="Listening")
