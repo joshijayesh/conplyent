@@ -48,6 +48,8 @@ def _install_linux(port):
     os.system("chmod +x /usr/bin/conplyent/conplyent_{}.sh".format(port))
 
     with open("/etc/systemd/system/conplyent_{}.service".format(port), "w") as file:
+        file.write("[Unit]\nDescription=conplyent service\nWants=network-online.target\n"
+                   "After=network-online.target network.target\n\n")
         file.write("[Service]\nExecStart=/usr/bin/conplyent/conplyent_{}.sh\n\n".format(port))
         file.write("[Install]\nWantedBy=default.target")
 
@@ -63,6 +65,7 @@ def _parse_args(arg_list):
 
     for arguments in arg_list[1:]:
         if(arguments):
+            print(arguments)
             if("=" in arguments):
                 key, value = arguments.split("=")
                 try:
@@ -126,7 +129,7 @@ def start_client(hostname, port, timeout):
 
     while(True):
         response = input("Enter command: ")
-        arg_list = re.split(r"\"(.*)\"|\'(.*)\'| ", response)
+        arg_list = re.split(r"\[(.*)\]|\"(.*)\"|\'(.*)\'| ", response)
         if(arg_list and (arg_list[0] == "commands")):
             print("Server commands:\n{}".format("\n".join(server_methods)))
         elif(not(arg_list) or not(arg_list[0] in server_methods)):
