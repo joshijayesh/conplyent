@@ -41,9 +41,12 @@ client_connection.exec("python multiple_output.py 2")
 listener = client_connection.exec("python wait_input.py", complete=False)
 client_connection.jobs()
 client_connection.ls()
-while(True):
-    if(listener.next(0.5) is None):
-        break
+try:
+    while(True):
+        if(listener.next(0.5) is None):
+            break
+except conplyent.exceptions.ClientTimeout:
+    pass
 client_connection.send_input(listener.id, "Continue")
 for response in iter(listener.next, None):
     pass
