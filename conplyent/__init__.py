@@ -1,5 +1,5 @@
 from .console import ConsoleExecutor
-from .exceptions import ConsoleExecTimeout
+from .exceptions import ConsoleExecTimeout, ClientTimeout, ZMQPairTimeout
 
 from . import client, server
 
