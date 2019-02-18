@@ -560,7 +560,7 @@ def exec(idx, queue, cmd):
     :returns: SUCCESS
     '''
     m_executor = ConsoleExecutor(cmd)
-    while(m_executor.alive):
+    while(m_executor.alive or not(m_executor.empty)):
         try:
             line = m_executor.read_output(0.01)
             if(line is not None):
@@ -651,7 +651,7 @@ def close_server(idx):
         if(job_tuple is not None):
             job_tuple[QUEUE_IDX].put({"type": KILL})
             update_client(idx, "Killing job {}".format(key))
-            job_tuple[THREAD_IDX].wait()
+            job_tuple[THREAD_IDX].join()
 
     update_client(idx, "Closing Server")
     return SUCCESS

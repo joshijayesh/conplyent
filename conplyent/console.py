@@ -75,6 +75,15 @@ class ConsoleExecutor():
         '''
         return self.__bg_worker.is_alive()
 
+    @property
+    def empty(self):
+        '''
+        Determines if there is no more output left in the bg executor.
+
+        :getter: (bool) True if no more output. False otherwise
+        '''
+        return self.__queue.empty()
+
     def read_output(self, timeout=None):
         '''
         Reads the next output from the subprocess. These must be sent by flushed
