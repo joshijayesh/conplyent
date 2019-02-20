@@ -8,7 +8,7 @@ Installation
 
 .. code:: sh
 
-    pip install conplyence
+    pip install conplyent
 
 Requirements
 ============
