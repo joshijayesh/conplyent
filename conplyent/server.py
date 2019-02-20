@@ -575,10 +575,6 @@ def exec(idx, queue, cmd):
                 m_executor.close()
                 break
     m_executor.close()
-    try:
-        update_client(idx, "Exiting...")
-    except ZMQError:
-        pass  # could occur if clients already disconnected.
     return SUCCESS
 
 
@@ -665,6 +661,17 @@ def os_info(idx):
     :returns: SUCCESS
     '''
     update_client(idx, os_name())
+    return SUCCESS
+
+
+def user_name(idx):
+    '''
+    Used to determine the name of user who's logged in, mainly for local directory
+    naming.
+
+    :returns: SUCCESS
+    '''
+    update_client(idx, os.getlogin())
     return SUCCESS
 
 
