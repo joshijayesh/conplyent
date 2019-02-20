@@ -65,7 +65,6 @@ def _parse_args(arg_list):
 
     for arguments in arg_list[1:]:
         if(arguments):
-            print(arguments)
             if("=" in arguments):
                 key, value = arguments.split("=")
                 try:

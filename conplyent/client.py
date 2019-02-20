@@ -214,8 +214,8 @@ class ClientConnection():
             for response in iter(listener.next, None):
                 output.append(response)
                 if(echo_response):
-                    print(response)
-            return output
+                    print(response.rstrip() if type(response) is str else response)
+            return output[1:]  # ignore the echo of command
         else:
             return listener
 
