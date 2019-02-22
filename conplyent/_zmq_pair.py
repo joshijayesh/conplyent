@@ -92,7 +92,7 @@ class ZMQPair(object):
         return mail
 
     def requeue_msg(self, msg):
-        if(not(msg.type == MSGType.ACKNOWLEDGE and msg.has_request_id())):
+        if(not(msg.type == MSGType.ACKNOWLEDGE) and msg.has_request_id()):
             self.__msg_backlog.setdefault(msg.request_id, list()).append(msg)
             logger.debug("Putting MSG to backlog {}".format(msg))
         else:

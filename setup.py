@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="conplyent",
-    version="0.0.8",
+    version="0.0.10",
     license="MIT",
     author="Jayesh Joshi",
     author_email="jayeshjo1@utexas.edu",
