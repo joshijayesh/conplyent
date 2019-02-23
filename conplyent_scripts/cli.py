@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 
 '''
-:File: start_server.py
+:File: cli.py
 :Author: Jayesh Joshi
 :Email: jayeshjo1@utexas.edu
+
+Console script used to install conplyent as a startup program on both Windows
+and Linux, and provides means to run both the client and the server.
 '''
 
 import os
 import ast
 import re
 import logging
+from subprocess import run, CREATE_NEW_CONSOLE
 
 import click
 import conplyent
@@ -28,6 +32,9 @@ def _install_windows(port):
                    "    conplyent start-server --port {}\n".format(port) +
                    "exit")
     print("Created new file {}".format(file_name))
+
+    print("Starting new console to start off the server")
+    run("{}\\conplyent_{}.bat".format(startup, port), creationflags=CREATE_NEW_CONSOLE)
 
 
 def _install_linux(port):
@@ -86,10 +93,12 @@ def cli():
 
 
 @cli.command(help="Installs the server to startup on each boot")
-@click.option("-p", "--port", help="Startup server will run on specified port", default=8001, type=int)
+@click.option("-p", "--port", help="Startup server will run on specified port", default=9922, type=int)
 def install(port):
     '''
-    Provides the means for users to start the server on startup.
+    Installs conplyent server for each platform. This currently supports Windows
+    10 and Ubuntu 16.04+. On windows, this simply adds it to the startup local
+    location. On ubuntu, this registers the server as a systemd service.
     '''
     if(os.name == "nt"):
         _install_windows(port)
@@ -99,13 +108,20 @@ def install(port):
         raise NotImplementedError("Unknown OS... unsupported by conplyent at the moment")
 
 
+@cli.command(help="Uninstalls the server and prevents it from starting up")
+@click.option("-p", "--port", help="Define port to uninstall", default=9922, type=int)
+def uninstall(port):
+    raise NotImplementedError("To be implemented")
+
+
 @cli.command(name="start-server", help="Runs the server and starts listening on port")
-@click.option("-p", "--port", help="Starts server on specified port", default=8001, type=int)
+@click.option("-p", "--port", help="Starts server on specified port", default=9922, type=int)
 @click.option("--quiet", help="Sets the logging to quiet", default=False, is_flag=True)
 @click.option("--debug", help="Sets the logging to debug (quiet must be false)", default=False, is_flag=True)
 def start_server(port, quiet, debug):
     '''
-    Starts the server.
+    Starts the server on localhost on the provided port. Users can run this on
+    quiet mode, basic info mode, or on debug mode.
     '''
     if(not(quiet)):
         logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
@@ -115,12 +131,12 @@ def start_server(port, quiet, debug):
 
 @cli.command(name="start-client", help="Run client to talk to server")
 @click.option("-h", "--hostname", help="Host name of server to connect to", required=True, type=str)
-@click.option("-p", "--port", help="Starts server on specified port", default=8001, type=int)
+@click.option("-p", "--port", help="Starts server on specified port", default=9922, type=int)
 @click.option("-t", "--timeout", help="Timeout waiting for server to connect", default=None, type=int)
 def start_client(hostname, port, timeout):
     '''
-    Starts interactive client mode. Only keyword connected to this interactive mode is "commands" which will
-    print out all available server commands.
+    Starts interactive client mode. Only keyword connected to this interactive
+    mode is "commands" which will print out all available server commands.
     '''
     conn = conplyent.client.add(hostname, port)
     conn.connect(timeout=timeout)
