@@ -8,7 +8,10 @@ with conplyent.client.add("localhost") as client_connection:
 
     client_connection.cd("..")
     client_connection.cd("tests")
-    client_connection.cd("some_random_location")
+    try:
+        client_connection.cd("some_random_location")
+    except FileNotFoundError:
+        pass  # This shouldn't exist lol
 
     client_connection.ls()
 
@@ -25,7 +28,10 @@ with conplyent.client.add("localhost") as client_connection:
     client_connection.mkdir("random_dir")
     client_connection.touch("random_dir/some_file.txt")
     client_connection.wrfile("random_dir", "hi")
-    client_connection.rm("random_dir")
+    try:
+        client_connection.rm("random_dir", raise_error=True)
+    except ValueError:
+        pass  # did not pass recursive so should error out
     client_connection.rm("random_dir", recursive=True)
     client_connection.rm("random_dir")
 
@@ -42,10 +48,7 @@ with conplyent.client.add("localhost") as client_connection:
     with client_connection.exec("python wait_input.py", complete=False, max_interval=0.5) as listener:
         client_connection.jobs()
         client_connection.ls()
-        try:
-            listener.clear_messages()
-        except conplyent.exceptions.ClientTimeout:
-            pass
+        listener.clear_messages()
         client_connection.send_input(listener.id, "Continue")
         listener.clear_messages()
         client_connection.send_input(listener.id, "Are you alive?")
