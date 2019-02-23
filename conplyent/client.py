@@ -4,9 +4,10 @@
 :Email: jayeshjo1@utexas.edu
 '''
 
-from threading import local
 import time
 import inspect
+import os
+from threading import local
 
 from ._zmq_pair import ZMQPair
 from ._msg import MSG, MSGType
@@ -133,6 +134,8 @@ class ClientConnection():
         reboot or shutdown request to the server so this connect method will
         wait for the server to come back alive.
 
+        :Optional:
+
         :param timeout: Amount of time in seconds to wait for the connection to
             be established. None = wait forever (nonblocking).
         :type timeout: (int)
@@ -188,7 +191,7 @@ class ClientConnection():
             established. Otherwise will return nothing.
         '''
         commands = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
-        return list(filter(lambda k: not (k[0] == "_" or k in self.__initial_methods), commands))
+        return list(filter(lambda k: not (k[0] == "_" or k in self.__initial_methods), commands)) + ["transfer"]
 
     def heartbeat(self, timeout=None):
         '''
@@ -199,6 +202,8 @@ class ClientConnection():
         forever for a response from the server. Users may pass in a timeout to
         see if the server will respond in that amount of time.
 
+        :Optional:
+
         :param timeout: Time in seconds to wait for a heartbeat response
         :type timeout: int
 
@@ -206,6 +211,33 @@ class ClientConnection():
         '''
         connection = _get_connection(self.__conn_id)
         return connection.pulse(timeout=timeout)
+
+    def transfer(self, src, dest, chunk=1024, timeout=None, **kwargs):
+        '''
+        Transfers file from client to server.
+
+        :param src: Path to file on client
+        :type src: str
+        :param dest: Destination to save on server
+        :type dest: str
+
+        :Optional:
+
+        :param chunk: Amount in bytes to send per transaction. (1024)
+        :type chunk: int
+        :param timeout: Time to wait for commands to be sent.
+        :type timeout:
+        '''
+        self.mkdirs(os.path.dirname(dest), exist_ok=True, timeout=timeout)
+        append = False
+        with open(src, "rb") as file:
+            while(True):
+                data = file.read(chunk)
+                if(data == b''):
+                    break
+                else:
+                    self.wrfile(dest, data, append=append, timeout=timeout)
+                    append = True
 
     def _command_server(self, cmd_id, *args, timeout=None, complete=True, echo_response=False, **kwargs):
         listener = self.__send_command(cmd_id, timeout=timeout, *args, **kwargs)
