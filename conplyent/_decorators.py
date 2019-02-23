@@ -15,7 +15,7 @@ def timeout(_func=None, name="Timeout"):
                     time.sleep(0.001)
             else:
                 for none in func(*args, **kwargs):
-                    pass
+                    time.sleep(0.001)
         return timeout_wrapper
 
     return timeout_decorator if(_func is None) else timeout_decorator(_func)
