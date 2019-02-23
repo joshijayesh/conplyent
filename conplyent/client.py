@@ -120,6 +120,12 @@ class ClientConnection():
         self.__synced = False
         self.__initial_methods = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
     def connect(self, timeout=None):
         '''
         Finds the ZMQPair from the local pool and try to establish connection.
@@ -239,8 +245,9 @@ class ClientConnection():
                     self.wrfile(dest, data, append=append, timeout=timeout)
                     append = True
 
-    def _command_server(self, cmd_id, *args, timeout=None, complete=True, echo_response=False, **kwargs):
-        listener = self.__send_command(cmd_id, timeout=timeout, *args, **kwargs)
+    def _command_server(self, cmd_id, *args, timeout=None, complete=True, echo_response=False, max_interval=None,
+                        **kwargs):
+        listener = self.__send_command(cmd_id, timeout=timeout, max_interval=max_interval, *args, **kwargs)
         if(complete):
             output = list()
             for response in iter(listener.next, None):
@@ -251,12 +258,12 @@ class ClientConnection():
         else:
             return listener
 
-    def __send_command(self, cmd_id, *args, timeout=None, **kwargs):
+    def __send_command(self, cmd_id, *args, timeout=None, max_interval=None, **kwargs):
         connection = _get_connection(self.__conn_id)
         msg = MSG(MSGType.COMMAND, cmd_id=cmd_id, args=args, keywargs=kwargs)
         connection.send_msg(msg, timeout)
         logger.debug("Sent Message: {}".format(msg))
-        return ClientConnection.ConnectionListener(connection)
+        return ClientConnection.ConnectionListener(connection, max_interval)
 
     def __sync_attr(self, timeout=None):
         connection = _get_connection(self.__conn_id)
@@ -289,12 +296,19 @@ class ClientConnection():
         been checked for a heartbeat.
         '''
 
-        def __init__(self, connection):
+        def __init__(self, connection, max_interval):
             self.__connection = connection
             self.__find_ack()
             self._done = False
             self._exit_code = None
+            self._max_interval = max_interval
             self.__curr_msg = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, type, value, traceback):
+            pass
 
         @property
         def done(self):
@@ -333,16 +347,31 @@ class ClientConnection():
             '''
             return self._id
 
-        def next(self, timeout=None):
+        @property
+        def max_interval(self):
+            '''
+            Max interval between two messages that this listener will receive.
+            If this value is None, there will be no timeout. If this value is
+            a positive integer, then Listener will timeout if messages are not
+            retrieved within the max_interal.
+
+            :getter: Get the max interval setting of this listener
+            :setter: Sets the max interval setting of this listener. Setting
+                must be either None, or positive integer
+            '''
+            return self._max_interval
+
+        @max_interval.setter
+        def max_interval(self, value):
+            assert value is None or type(value) is int and value >= 0, "Timeout must be None or positive integer"
+            self._max_interval = value
+
+        def next(self):
             '''
             Checks to see if there has been any messages for this job. By
             default, will keep waiting until a message has arrived. Users can
             override this passing in timeout to wait only a set amount of time
-            for each message.
-
-            :param timeout: Amount of time in seconds to wait for message to
-                come in. Pass in None to wait forever.
-            :type timeout: int
+            for each message to the initialization of this listener.
 
             :returns: Update provided by the job, or None if: (Job has
                 Completed, timed out waiting for message, or connection with
@@ -357,10 +386,17 @@ class ClientConnection():
             self.__response = None
             assert not(self._done), "Server has already completed job..."
             try:
-                self.__receive_message(timeout=timeout, exception=ClientTimeout)
+                self.__receive_message(timeout=self._max_interval, exception=ClientTimeout)
             except (ZMQPairTimeout):
                 raise ClientTimeout("Server did not respond in {} s".format(timeout))
             return self.__response
+
+        def clear_messages(self):
+            '''
+            Goes through all of the messages gained from the
+            '''
+            for msg in iter(self.next, None):
+                pass
 
         @timeout(name="Listening")
         def __receive_message(self, *args, **kwargs):
