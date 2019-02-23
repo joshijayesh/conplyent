@@ -97,7 +97,7 @@ class ConsoleExecutor():
         :type timeout: int
 
         :returns: Output read from the subprocess. This value will be None if
-        the subprocess has exited.
+            the subprocess has exited.
 
         :raises ConsoleExecTimeout: If user specifies a non-None/non-Negative
             timeout and subprocess has not responded in time.
@@ -143,8 +143,6 @@ class ConsoleExecutor():
         '''
         Terminates the subprocess and waits for it to exit gracefully. Currently
         this will not stop any child processes spawned by our subprocess.
-
-        .. todo:: Figure out how to close process groups in Windows.
         '''
         self.__popen.terminate()
         self.__popen.wait()
