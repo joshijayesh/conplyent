@@ -38,7 +38,7 @@ QUEUE_IDX = 0
 THREAD_IDX = 1
 
 
-def start(port=8001):
+def start(port=9922):
     '''
     Begins the server on the current process. This is a looped call and only
     exists on KeyboardInterrupt  or if a connected client has requested to close
@@ -269,13 +269,9 @@ def cd(idx, dest):
     :returns: SUCCESS if able to change directory. INVALID_PARAMETER if
         directory requested does not exist
     '''
-    try:
-        os.chdir(dest)
-        update_client(idx, os.getcwd())
-        return SUCCESS
-    except FileNotFoundError:
-        update_client(idx, "{}: No such directory.".format(dest))
-        return INVALID_PARAMETER
+    os.chdir(dest)
+    update_client(idx, os.getcwd())
+    return SUCCESS
 
 
 @register_command
