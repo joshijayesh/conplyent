@@ -14,11 +14,12 @@ from ._msg import MSG, MSGType
 from .exceptions import ZMQPairTimeout, ClientTimeout
 from ._decorators import timeout
 from ._general import logger
+from .server import INVALID_PARAMETER, ERROR
 
 _pool = local()
 
 
-def add(hostname, port=8001):
+def add(hostname, port=9922):
     '''
     Clients can be added using this method which registers the a connection to a
     local pool to allow for creation of many clients. This creates a class
@@ -40,8 +41,8 @@ class ClientConnection():
     '''
     Client connection class that provides the means to connect to a local or
     remote server and execute commands. These commands are defined in the
-    :module:`server`. This class will request to sync methods with the remote
-    server which will provide all available methods. Users using the
+    server module. This class will request to sync methods with the
+    remote server which will provide all available methods. Users using the
     ClientConnection class can easily send commands over to the remote server as
     if just calling class methods.
 
@@ -81,7 +82,7 @@ class ClientConnection():
 
     When using these server methods, users can provide three additional kwargs
     to the method that are processed client side. These are "timeout",
-    "complete", and "echo_response".
+    "complete", "echo_response", "max_interval", and "raise_error".
 
     Timeout defines the amount of time that we want to wait for the send command
     to go through. This could come into play for scenarios where you have a
@@ -113,14 +114,40 @@ class ClientConnection():
 
     Echo Response will simply print to stdout the response in real time. This
     can be useful when users have enabled complete.
+
+    Max Interval determines the amount of time that the listener should wait
+    between each message. This should be used when you expect that the program
+    being run on the system under test should respond every x interval and not
+    doing so is a significance of the server crashing, whether due to
+    application error or due to server in an unstable state. If the server does
+    not respond between each messages larger than user set max_interval, then
+    listener will throw a ClientTimeout error. Max Interval is defined in
+    seconds, and can be sent as a floating number to specify lower granularity.
+    For cases where complete is set to False, max_interval can later be adjusted
+    through the property exposed by ClientListener.
+
+    :max_interval=#:
+
+    >>> my_conn.exec("check_system_stability", max_interval=10, complete=True)
+
+    Raise Error is by default set to False. Command sent to the server can
+    return either INVALID_PARAMETER, which is a field returned by server
+    commands noting that the parameter sent by user is invalid, or ERROR, noting
+    that the command failed due to some exception. If Raise Error is set to
+    True, then INVALID_PARAMETER responses will raise a ValueError, and ERROR
+    responses will raise the error retrieved.
     '''
 
-    def __init__(self, conn_id):
+    def __init__(self, conn_id, enter_connect=True, enter_connect_timeout=None):
         self.__conn_id = conn_id
         self.__synced = False
         self.__initial_methods = [i[0] for i in [k for k in inspect.getmembers(self, inspect.ismethod)]]
+        self.__enter_connect = enter_connect
+        self.__enter_connect_timeout = enter_connect_timeout
 
     def __enter__(self):
+        if(self.__enter_connect):
+            self.connect(timeout=self.__enter_connect_timeout)
         return self
 
     def __exit__(self, type, value, traceback):
@@ -156,7 +183,7 @@ class ClientConnection():
         else:
             logger.info("Waiting for {} to respond...".format(self.__conn_id))
         if(not(connection.pulse(timeout))):
-            raise ConnectionError("Slave not responding at {}".format(self.__conn_id))
+            raise ConnectionError("Server not responding at {}".format(self.__conn_id))
         if(not(self.__synced)):
             self.__sync_attr()
             self.__synced = True
@@ -234,7 +261,7 @@ class ClientConnection():
         :param timeout: Time to wait for commands to be sent.
         :type timeout:
         '''
-        self.mkdirs(os.path.dirname(dest), exist_ok=True, timeout=timeout)
+        self.mkdirs(os.path.dirname(dest), exist_ok=True, timeout=timeout, **kwargs)
         append = False
         with open(src, "rb") as file:
             while(True):
@@ -242,11 +269,11 @@ class ClientConnection():
                 if(data == b''):
                     break
                 else:
-                    self.wrfile(dest, data, append=append, timeout=timeout)
+                    self.wrfile(dest, data, append=append, timeout=timeout, **kwargs)
                     append = True
 
     def _command_server(self, cmd_id, *args, timeout=None, complete=True, echo_response=False, max_interval=None,
-                        **kwargs):
+                        raise_error=False, **kwargs):
         listener = self.__send_command(cmd_id, timeout=timeout, max_interval=max_interval, *args, **kwargs)
         if(complete):
             output = list()
@@ -254,6 +281,11 @@ class ClientConnection():
                 output.append(response)
                 if(echo_response):
                     print(response.rstrip() if type(response) is str else response)
+            if(raise_error):
+                if(listener.exit_code == ERROR):
+                    raise output[-1]
+                elif(listener.exit_code == INVALID_PARAMETER):
+                    raise ValueError(output[-1])
             return output[1:]  # ignore the echo of command
         else:
             return listener
@@ -393,10 +425,19 @@ class ClientConnection():
 
         def clear_messages(self):
             '''
-            Goes through all of the messages gained from the
+            Goes through all of the messages sent by the server in regards to
+            this command and clears them out. This will NOT return anything.
+            Does not raise ClientTimeout error. Users should check with done
+            property to determine whether the command is complete or not.
+
+            Useful if you don't care about the output and want to continue until
+            timeout.
             '''
-            for msg in iter(self.next, None):
-                pass
+            try:
+                for msg in iter(self.next, None):
+                    pass
+            except ClientTimeout:
+                return
 
         @timeout(name="Listening")
         def __receive_message(self, *args, **kwargs):
