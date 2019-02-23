@@ -1,3 +1,17 @@
+'''
+:File: _zmq_pair.py
+:Author: Jayesh Joshi
+:Email: jayeshjo1@utexas.edu
+
+Wrapper around the ZMQ class used by client and server to communicate.
+
+Built on the principle of ISRs -- IO requests should be handled in the
+background when the main thread is not busy. Main thread can then poll the
+background thread to check to see if there are any updates. This allows the main
+thread to run foreground activities and check the connection whenever desired
+for any updates.
+'''
+
 import zmq
 import time
 from threading import Thread, local
@@ -13,7 +27,7 @@ _ctx = local()
 
 
 class ZMQPair(object):
-    def __init__(self, dest_ip=None, port=8001):
+    def __init__(self, dest_ip=None, port=9922):
         self._context = _get_context()
         self._socket = self._context.socket(zmq.PAIR)
         self._socket.setsockopt(zmq.LINGER, 0)
