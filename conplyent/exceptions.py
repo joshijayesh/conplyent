@@ -9,14 +9,27 @@ import traceback
 
 
 class ZMQPairTimeout(RuntimeError):
+    '''
+    Lower level timeout raised by ZMQPair when sending or receiving messages.
+    Client/Server implementation should intercept this so users shouldn't need
+    to worry about it.
+    '''
     pass
 
 
 class ConsoleExecTimeout(RuntimeError):
+    '''
+    Timeout raised by ConsoleExecutor if the executor did not respond in the
+    amount of time specified by user.
+    '''
     pass
 
 
 class ClientTimeout(RuntimeError):
+    '''
+    Timeout raised by Client when the server did not repsond in the amount of
+    time specified by user.
+    '''
     pass
 
 

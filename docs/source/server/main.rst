@@ -14,6 +14,10 @@ The default command set comes with commands that can be executed remotely to pro
 
 * cwd -- Current working directory of the server.
 
+* mkdir -- Creates a directory on the server.
+
+* mkdirs -- Creates directories recursively on the server.
+
 * rm -- Remove files and folders in the server. (would require elevation for certain directories)
 
 * rdfile -- Reads the contents of a file.
@@ -31,6 +35,8 @@ The default command set comes with commands that can be executed remotely to pro
 * kill -- Terminates the background task spawned by exec.
 
 * close_server -- Exits the server.
+
+* user_name -- Retrieve name of user logged in to the server.
 
 * os_info -- Name of the current OS on the server.
 
@@ -66,4 +72,4 @@ Command echo now can be used from the client, both from python scripts and the c
 Conplyent Extensions
 --------------------
 
-Planning to add extension files to conplyent which can interface other open source libraries, like pyautogui, and ability to start servers using these extensions easily.
+Planning to add extension files to conplyent which can interface other open source libraries and ability to start servers using these extensions easily.
