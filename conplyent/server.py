@@ -11,6 +11,7 @@ from shutil import rmtree
 from threading import Thread
 from zmq import Again, ZMQError
 from queue import Queue
+from pathlib import Path
 
 from ._zmq_pair import ZMQPair
 from ._msg import MSGType, MSG
@@ -367,6 +368,28 @@ def mkdir(idx, path, mode=None):
 
 
 @register_command
+def mkdirs(idx, path, exist_ok=False):
+    '''
+    Goes through the whole path, creating directories if they don't exist. By
+    default, this will throw an error if the end directory already exists. Users
+    can pass in exist_ok to prevent this error.
+
+    :param path: Path of new directory to be created
+    :type path: str
+
+    :Optional:
+
+    :param exist_ok: set to True if not to throw error if exists
+    :type exist_ok: bool
+
+    :returns: SUCCESS
+    '''
+    Path(path).mkdir(parents=True, exist_ok=exist_ok)
+    update_client(idx, "Created directory: {}".format(path))
+    return SUCCESS
+
+
+@register_command
 def rm(idx, path, recursive=False):
     '''
     Removes files or directories or links within the path specified. Initially,
@@ -653,6 +676,7 @@ def close_server(idx):
     return SUCCESS
 
 
+@register_command
 def os_info(idx):
     '''
     Can be used to determine the type of OS running on the server. Updates the
@@ -664,6 +688,7 @@ def os_info(idx):
     return SUCCESS
 
 
+@register_command
 def user_name(idx):
     '''
     Used to determine the name of user who's logged in, mainly for local directory
