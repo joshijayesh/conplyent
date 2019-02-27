@@ -94,7 +94,6 @@ class ZMQPair(object):
             self.__send_process(msg, timeout=timeout, exception=ZMQPairTimeout)
             return True
         else:
-            self._connected = False
             return False
 
     def recv_msg(self, timeout=None, msg_id=None):
