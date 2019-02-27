@@ -115,5 +115,16 @@ class TestInput(TestConsoleExecutor):
         self.assertEqual(self._console_executor.returncode, 0)
 
 
+class TestCustomPopen(TestCase):
+
+    def test_kwargs(self):
+        self._console_executor = ConsoleExecutor("dir", shell=True, universal_newlines=True)
+        for output in iter(self._console_executor.read_output, None):
+            pass
+        self._console_executor.close()
+
+        self.assertEqual(self._console_executor.returncode, 0)
+
+
 if(__name__ == '__main__'):
     main()

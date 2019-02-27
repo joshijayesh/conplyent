@@ -56,6 +56,12 @@ class TestSimpleCommands(TestClient):
         self._client_connection.rm("start_server.py", raise_error=True)
         self._client_connection.cd("tests")
 
+    def test_error(self):
+        self._client_connection.connect()
+        with self._client_connection.exec("python throw_error.py", complete=False) as listener:
+            listener.clear_messages()
+            self.assertNotEqual(listener.exit_code, 0)
+
 
 class TestWith(TestCase):
     def test_with(self):
