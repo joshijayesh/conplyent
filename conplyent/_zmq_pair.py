@@ -137,7 +137,7 @@ class ZMQPair(object):
                     if(msg.type == MSGType.HEARTBEAT):
                         return True
                     else:
-                        self.__queue.put(msg)
+                        self.requeue_msg(msg)
             except ZMQPairTimeout:
                 return False
         else:
