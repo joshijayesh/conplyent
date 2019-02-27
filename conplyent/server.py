@@ -594,7 +594,7 @@ def exec(idx, queue, cmd):
                 m_executor.close()
                 break
     m_executor.close()
-    return SUCCESS
+    return m_executor.returncode
 
 
 @register_command
