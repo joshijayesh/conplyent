@@ -100,7 +100,6 @@ def start(port=9922):
             _zmq_pair.close()  # make sure we close zmq gracefully before exit
             raise
         except Again:
-            print("LOST")
             logger.info("Lost connection with host...")
 
 
@@ -296,7 +295,7 @@ def ls(idx, src="."):
         requested does not exist
     '''
     if(not(os.path.isdir(src))):
-        update_client("{}: No such directory".format(src))
+        update_client(idx, "{}: No such directory".format(src))
         return INVALID_PARAMETER
     dir_path = os.getcwd() if src == "." else src
     name_list = "Listing of Directory {}:\n\n".format(dir_path)
