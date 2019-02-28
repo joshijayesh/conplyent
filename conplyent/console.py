@@ -154,6 +154,8 @@ class ConsoleExecutor():
         '''
         if(self.alive):
             self.kill()
+        self.__bg_worker.join()
+        self.__popen.wait()
         self.__popen.stdin.close()
         self.__popen.stdout.close()
 
