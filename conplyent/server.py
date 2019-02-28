@@ -626,6 +626,24 @@ def send_input(idx, job_num, value):
 
 
 @register_command
+def is_alive(idx, job_num):
+    '''
+    Checks to see if the job is still alive or has exited. Informs the client
+    True if the job is still alive. False otherwise. Always returns SUCCESS.
+
+    :param job_num: ID of the job to check.
+    :type job_num: int
+
+    :returns: SUCCESS
+    '''
+    if(job_num in JOBS and JOBS[job_num] is not None):
+        update_client(idx, True)
+    else:
+        update_client(idx, False)
+    return SUCCESS
+
+
+@register_command
 def kill(idx, job_num):
     '''
     For the jobs that follow the default queue pattern, this method sends a

@@ -1,8 +1,5 @@
 import conplyent
-import logging
 import time
-
-logging.basicConfig(level=logging.INFO)
 
 
 with conplyent.client.add("localhost") as client_connection:
@@ -50,14 +47,25 @@ with conplyent.client.add("localhost") as client_connection:
     client_connection.jobs()
     client_connection.exec("python multiple_output.py 2")
 
+    assert client_connection.heartbeat(), "Should not fail"
     with client_connection.exec("python wait_input.py", complete=False, max_interval=0.5) as listener:
         client_connection.jobs()
         client_connection.ls()
+
+        assert client_connection.is_alive(listener.id)[0], "Job should still be alive"
+
+        assert client_connection.heartbeat(), "Should not fail"
         listener.clear_messages()
+        assert client_connection.heartbeat(), "Should not fail"
         client_connection.send_input(listener.id, "Continue")
+        assert client_connection.heartbeat(), "Should not fail"
         listener.clear_messages()
+        assert client_connection.heartbeat(), "Should not fail"
         client_connection.send_input(listener.id, "Are you alive?")
         client_connection.send_input(0xFFFF, "HI")
+
+    assert client_connection.heartbeat(), "Should not fail"
+    assert not(client_connection.is_alive(listener.id)[0]), "Job should still be finished"
 
     listener = client_connection.exec("python wait_input.py", complete=False)
     client_connection.kill(listener.id)
@@ -72,7 +80,6 @@ with conplyent.client.add("localhost") as client_connection:
 
     client_connection.exec("python paused_multiple_output.py 5 5 0.25", complete=False)
     client_connection.disconnect()
-    time.sleep(0.5)
     client_connection.connect()
 
     client_connection.exec("python throw_error.py")
