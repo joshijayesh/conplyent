@@ -202,6 +202,7 @@ class ClientConnection():
         connection = _get_connection(self.__conn_id)
         connection.close()
         logger.info("Closing connection to {}".format(self.__conn_id))
+        time.sleep(0.001)
 
     def disconnect(self):
         '''
@@ -213,6 +214,7 @@ class ClientConnection():
         connection = _get_connection(self.__conn_id)
         connection.disconnect()
         logger.info("Disconnecting {}".format(self.__conn_id))
+        time.sleep(0.001)
 
     def server_methods(self):
         '''
