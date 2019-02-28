@@ -1,5 +1,4 @@
 import conplyent
-import time
 
 
 with conplyent.client.add("localhost") as client_connection:
