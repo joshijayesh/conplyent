@@ -20,3 +20,5 @@ from . import client, server
 
 # Server globals and register commands
 from .server import MSG_PORT, INVALID_PARAMETER, SUCCESS, ERROR, register_command, register_background_command
+
+from .options import save_logs, edit_options
