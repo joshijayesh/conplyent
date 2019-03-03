@@ -30,6 +30,7 @@ def _install_windows(port):
     with open(file_name, "w") as file:
         file.write("if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start \"\" /min \"%~dpnx0\" %* && exit\n"
                    "    conplyent start-server --port {}\n".format(port) +
+                   "    set /p id=\"Press enter to exit command...\"\n" +
                    "exit")
     print("Created new file {}".format(file_name))
 
