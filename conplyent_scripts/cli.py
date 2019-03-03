@@ -115,17 +115,30 @@ def uninstall(port):
     raise NotImplementedError("To be implemented")
 
 
+@cli.command(help="Edit system local options for conplyent")
+@click.option("--revert", help="Revert conplyent options to defaults", default=False, is_flag=True)
+def edit_options(revert):
+    '''
+    Allows users to edit local options for conplyent
+    '''
+    conplyent.edit_options(revert=revert)
+
+
 @cli.command(name="start-server", help="Runs the server and starts listening on port")
 @click.option("-p", "--port", help="Starts server on specified port", default=9922, type=int)
 @click.option("--quiet", help="Sets the logging to quiet", default=False, is_flag=True)
 @click.option("--debug", help="Sets the logging to debug (quiet must be false)", default=False, is_flag=True)
-def start_server(port, quiet, debug):
+@click.option("--savelog/--no-savelog", help="Saves consoleoutput to log directory", default=True, is_flag=True)
+def start_server(port, quiet, debug, savelog):
     '''
     Starts the server on localhost on the provided port. Users can run this on
     quiet mode, basic info mode, or on debug mode.
     '''
     if(not(quiet)):
         logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+
+    if(savelog):
+        conplyent.save_logs()
 
     conplyent.server.start(port)
 
