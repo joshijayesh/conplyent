@@ -22,7 +22,7 @@ with conplyent.client.add("localhost") as client_connection:
     client_connection.touch("random_dir")
     client_connection.touch("some_file.txt")
 
-    client_connection.rm("random_multiple_dirs/multiple_dirs")
+    client_connection.rm("random_multiple_dirs", recursive=True)
     client_connection.rm("random_dir")
     client_connection.rm("some_file.txt")
 
