@@ -86,6 +86,7 @@ class ZMQPair(object):
         self._socket.disconnect("tcp://{}:{}".format(self._dest_ip, self._port))
         self._connected = False
         logger.debug("Main:: Disconnect: {}:{}".format(self._dest_ip, self._port))
+        self.__msg_backlog.clear()
 
     def send_msg(self, msg, timeout=None):
         assert type(msg) == MSG, "ZMQPair only communicates through MSG class"
