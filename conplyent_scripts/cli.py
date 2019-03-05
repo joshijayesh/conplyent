@@ -13,13 +13,13 @@ import os
 import ast
 import re
 import logging
-from subprocess import run, CREATE_NEW_CONSOLE
 
 import click
 import conplyent
 
 
 def _install_windows(port):
+    from subprocess import run, CREATE_NEW_CONSOLE
     print("Detected Windows OS")
     print("Installing conplyent server listening to port # {}".format(port))
     user = os.getlogin()

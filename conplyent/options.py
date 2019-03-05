@@ -33,7 +33,11 @@ def save_logs():
         log_info = json.load(constants)
 
     log_dir = log_info["logging_dir"][os_name()]
-    log_path = Path(log_dir.format(user_name=os.getlogin()))
+    try:
+        user_name = os.getlogin()
+    except OSError:
+        user_name = "root"
+    log_path = Path(log_dir.format(user_name=user_name))
     log_path.mkdir(parents=True, exist_ok=True)
 
     # Remove logs if > max_logs
