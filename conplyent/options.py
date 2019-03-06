@@ -28,9 +28,7 @@ def save_logs():
     * max_logs determines how many logs conplyent will store. If next log will
         exceed this value, will delete the oldest log.
     '''
-    options_path = _create_options()
-    with open("{}/{}".format(str(options_path), "conplyent.json"), "r") as constants:
-        log_info = json.load(constants)
+    options_path, log_info = _create_options()
 
     log_dir = log_info["logging_dir"][os_name()]
     try:
@@ -58,14 +56,11 @@ def edit_options(revert=False):
     :param revert: If specified, will revert conplyent options to defaults.
     :type revert: bool
     '''
-    options_path = _create_options()
+    options_path, log_info = _create_options()
 
     if(revert):
         _dump_defaults(options_path)
     else:
-        with open("{}/{}".format(str(options_path), "conplyent.json"), "r") as constants:
-            log_info = json.load(constants)
-
         new_options = _edit_each(log_info, "Conplyent")
 
         with open("{}/{}".format(str(options_path), "conplyent.json"), "w") as constants:
@@ -76,9 +71,11 @@ def _create_options():
     options_path = _options_path()
     if(not(os.path.exists("{}/{}".format(str(options_path), "conplyent.json")))):
         options_path.mkdir(parents=True, exist_ok=True)
-        _dump_defaults(options_path)
-
-    return options_path
+        return options_path, _dump_defaults(options_path)
+    else:
+        with open("{}/{}".format(str(options_path), "conplyent.json"), "r") as constants:
+            log_info = json.load(constants)
+        return options_path, log_info
 
 
 def _options_path():
@@ -102,6 +99,8 @@ def _dump_defaults(options_path):
 
     with open("{}/{}".format(str(options_path), "conplyent.json"), "w") as file:
         json.dump(default_options, file, indent=4)
+
+    return default_options
 
 
 def _edit_each(param, string):
