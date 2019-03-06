@@ -28,7 +28,10 @@ def save_logs():
     * max_logs determines how many logs conplyent will store. If next log will
         exceed this value, will delete the oldest log.
     '''
-    options_path, log_info = _create_options()
+    options_path, log_info = _create_options()\
+
+    if(not(log_info)):
+        log_info = _dump_defaults(options_path)
 
     log_dir = log_info["logging_dir"][os_name()]
     try:
