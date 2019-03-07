@@ -332,10 +332,10 @@ class ClientConnection():
 
         def __init__(self, connection, max_interval):
             self.__connection = connection
-            self.__find_ack()
             self._done = False
             self._exit_code = None
             self._max_interval = max_interval
+            self.__find_ack()
             self.__curr_msg = 0
 
         def __enter__(self):
@@ -462,7 +462,7 @@ class ClientConnection():
         def __find_ack(self, timeout=None):
             while(True):
                 try:
-                    msg = self.__connection.recv_msg(timeout=None)
+                    msg = self.__connection.recv_msg(timeout=self._max_interval)
                     if(msg.type == MSGType.ACKNOWLEDGE):  # There should always be only a single ack coming back
                         self._id = msg.request_id
                         break
@@ -470,7 +470,7 @@ class ClientConnection():
                         self.__connection.requeue_msg(msg)
                         time.sleep(0)  # some other thread probably wanted that message...
                 except ZMQPairTimeout:
-                    raise ZMQPairTimeout("Slave did not acknowledge request in {}s".format(timeout))
+                    raise ClientTimeout("Slave did not acknowledge request in {}s".format(timeout))
 
 
 def _new_connection(conn):
