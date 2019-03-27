@@ -16,7 +16,7 @@ from pathlib import Path
 from ._zmq_pair import ZMQPair
 from ._msg import MSGType, MSG
 from ._general import SynchronizedDict, logger, os_name
-from .exceptions import min_exception_to_str, ConsoleExecTimeout
+from .exceptions import min_exception_to_str, ConsoleExecTimeout, exception_to_str
 from .console import ConsoleExecutor
 
 
@@ -101,6 +101,8 @@ def start(port=9922):
             raise
         except Again:
             logger.info("Lost connection with host...")
+        except Exception:
+            logger.info(exception_to_str())
 
 
 def register_command(func):
