@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 :File: cli.py
@@ -10,6 +10,7 @@ and Linux, and provides means to run both the client and the server.
 '''
 
 import os
+import sys
 import ast
 import re
 import logging
@@ -50,8 +51,10 @@ def _install_linux(port):
     if(not(os.path.isdir("/usr/bin/conplyent"))):
         os.mkdir("/usr/bin/conplyent")
 
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     with open("/usr/bin/conplyent/conplyent_{}.sh".format(port), "w") as file:
-        file.write("#!/bin/sh\nconplyent start-server --port {}".format(port))
+        file.write("#!/bin/sh\npip3 install conplyent\n{} {}/cli.py start-server --port {}".format(
+            sys.executable, dir_path, port))
 
     os.system("chmod +x /usr/bin/conplyent/conplyent_{}.sh".format(port))
 
@@ -91,7 +94,10 @@ def _parse_args(arg_list):
 
 @click.group()
 def cli():
-    pass
+    if(os.name == 'posix'):
+        if(os.geteuid() != 0):
+            os.system("sudo python3 {}".format(" ".join(sys.argv)))
+            sys.exit()
 
 
 @cli.command(help="Installs the server to startup on each boot")
