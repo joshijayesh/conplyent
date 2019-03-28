@@ -63,6 +63,7 @@ def _install_linux(port):
 
     os.system("chmod 664 /etc/systemd/system/conplyent_{}.service".format(port))
     os.system("systemctl enable conplyent_{}.service".format(port))
+    os.system("systemctl restart conplyent_{}.service".format(port))
 
     print("Done")
 
