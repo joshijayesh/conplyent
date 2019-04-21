@@ -9,6 +9,7 @@ class TestConnectionError(TestCase):
         with self.assertRaises(ConnectionError) as context:
             connection.connect(timeout=0.25)
         self.assertTrue("Server not responding" in str(context.exception))
+        connection.close()
 
 
 if(__name__ == "__main__"):
