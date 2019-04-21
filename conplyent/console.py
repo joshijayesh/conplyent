@@ -40,8 +40,7 @@ class ConsoleExecutor():
             self.__popen = Popen(cmd, stdout=PIPE, stderr=STDOUT, stdin=PIPE, universal_newlines=True, shell=False,
                                  start_new_session=True)
         self.__queue = Queue()
-        self.__bg_worker = Thread(target=ConsoleExecutor.__file_reader, args=(self.__queue, self.__popen.stdout),
-                                  daemon=True)
+        self.__bg_worker = Thread(target=ConsoleExecutor.__file_reader, args=(self.__queue, self.__popen.stdout))
         self.__bg_worker.start()
         self._alive = True
 

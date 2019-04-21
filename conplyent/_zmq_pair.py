@@ -14,6 +14,7 @@ for any updates.
 
 import zmq
 import time
+import atexit
 from threading import Thread, local
 from queue import Queue
 
@@ -24,10 +25,12 @@ from .exceptions import ZMQPairTimeout
 
 
 _ctx = local()
+alive_list = {}
 
 
 class ZMQPair(object):
     def __init__(self, dest_ip=None, port=9922):
+        global alive_list
         self._context = _get_context()
         self._socket = self._context.socket(zmq.PAIR)
         self._socket.setsockopt(zmq.LINGER, 0)
@@ -36,8 +39,10 @@ class ZMQPair(object):
         self._connected = False
         self.__queue = Queue()
         self.__msg_backlog = {}
-        self.__bg_worker = Thread(target=ZMQPair.__bg_receiver, args=(self.__queue, self._socket), daemon=True)
+        alive_list[self._socket] = True
+        self.__bg_worker = Thread(target=ZMQPair.__bg_receiver, args=(self.__queue, self._socket))
         self.__bg_worker.start()
+        atexit.register(self.close)
 
     @property
     def context(self):
@@ -60,9 +65,11 @@ class ZMQPair(object):
         return self._connected
 
     def close(self):
+        global alive_list
         if(self._connected and self._dest_ip):
             self.disconnect()
         self._socket.close()
+        alive_list[self._socket] = False
 
     def bind(self):
         self._connected = self.__heartbeat(0.1)
@@ -147,7 +154,7 @@ class ZMQPair(object):
     def __bg_receiver(queue, socket):
         logger.debug("Thread:: Starting")
         try:
-            while(True):
+            while(alive_list[socket]):
                 while(not(socket.poll(timeout=1, flags=zmq.POLLIN))):
                     time.sleep(0)
                 msg = socket.recv_pyobj()
@@ -164,7 +171,7 @@ class ZMQPair(object):
                     socket.send_pyobj(MSG(MSGType.HEARTBEAT, request=False))
                 else:
                     queue.put(msg)
-        except zmq.ZMQError:
+        except (zmq.ZMQError, zmq.Again):
             pass
 
 

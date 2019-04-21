@@ -5,6 +5,7 @@
 '''
 
 import os
+import sys
 from glob import glob
 from functools import wraps
 from shutil import rmtree
@@ -248,9 +249,13 @@ def update_client(idx, string):
     :param string: Message to send to the server as an update.
     :type string: str
     '''
-    _msg_num.setdefault(idx, 0)
-    _zmq_pair.send_msg(MSG(MSGType.DETAILS, request_id=idx, details=string, msg_num=_msg_num[idx]))
-    _msg_num[idx] += 1
+    try:
+        _msg_num.setdefault(idx, 0)
+        _zmq_pair.send_msg(MSG(MSGType.DETAILS, request_id=idx, details=string, msg_num=_msg_num[idx]))
+        _msg_num[idx] += 1
+    except Again:
+        logger.info("Failed to contact client... Exiting process")
+        sys.exit()
 
 
 @register_command
