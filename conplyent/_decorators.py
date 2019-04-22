@@ -12,10 +12,10 @@ def timeout(_func=None, name="Timeout"):
                     time_taken = time.perf_counter() - start_time
                     if(time_taken > kwargs["timeout"]):
                         raise kwargs["exception"]("{} did not complete in {}s".format(name, time_taken))
-                    time.sleep(0.001)
+                    time.sleep(0)
             else:
                 for none in func(*args, **kwargs):
-                    time.sleep(0.001)
+                    time.sleep(0)
         return timeout_wrapper
 
     return timeout_decorator if(_func is None) else timeout_decorator(_func)
