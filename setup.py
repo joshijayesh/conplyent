@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="conplyent",
-    version="0.2.11",
+    version="0.2.12",
     license="MIT",
     author="Jayesh Joshi",
     author_email="jayeshjo1@utexas.edu",
@@ -11,7 +11,7 @@ setup(
     description="Local and Remote Console executor",
     packages=["conplyent", "conplyent_scripts"],
     install_requires=[
-        "pyzmq>=17.1.2",
+        "pyzmq==17.1.2",
         "click>=7.0"],
     entry_points={
         "console_scripts": [

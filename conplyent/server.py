@@ -764,3 +764,19 @@ def shutdown(idx):
     elif(my_os == "mac"):
         raise NotImplementedError("Macs not supported at the moment")
     return SUCCESS
+
+
+@register_command
+def sleep(idx):
+    '''
+    Puts the system into S3 state.
+    '''
+    my_os = os_name()
+    update_client(idx, "Requesting os to sleep")
+    if(my_os == "windows"):
+        os.system("{}\\System32\\rundll32.exe powrprof.dll,SetSuspendState 0,1,0".format(os.environ['windir']))
+    elif(my_os == "linux"):
+        raise NotImplementedError("Sleep not supported at moment for linux")
+    elif(my_os == "mac"):
+        raise NotImplementedError("Macs not supported at the moment")
+    return SUCCESS
