@@ -254,8 +254,8 @@ def update_client(idx, string):
         _zmq_pair.send_msg(MSG(MSGType.DETAILS, request_id=idx, details=string, msg_num=_msg_num[idx]))
         _msg_num[idx] += 1
     except Again:
-        logger.info("Failed to contact client... Exiting process")
-        sys.exit()
+        logger.info("Failed to contact client...")
+        raise
 
 
 @register_command
