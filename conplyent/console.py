@@ -4,6 +4,7 @@
 :Email: jayeshjo1@utexas.edu
 '''
 
+import psutil
 from subprocess import Popen, PIPE, STDOUT
 from threading import Thread
 from queue import Queue
@@ -143,6 +144,7 @@ class ConsoleExecutor():
         Terminates the subprocess and waits for it to exit gracefully. Currently
         this will not stop any child processes spawned by our subprocess.
         '''
+        self.__kill_proc_tree()
         self.__popen.terminate()
         self.__popen.wait()
 
@@ -167,3 +169,14 @@ class ConsoleExecutor():
         for line in iter(file.readline, b'' or ''):
             queue.put(line)
         file.close()
+
+    def __kill_proc_tree(self):
+        '''
+        Borrow:
+        https://stackoverflow.com/questions/1230669/subprocess-deleting-child-processes-in-windows
+        '''
+        parent = psutil.Process(self.__popen.pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            child.kill()
+        gone, still_alive = psutil.wait_procs(children, timeout=5)
