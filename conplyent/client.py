@@ -185,7 +185,10 @@ class ClientConnection():
         if(not(connection.pulse(timeout))):
             raise ConnectionError("Server not responding at {}".format(self.__conn_id))
         if(not(self.__synced)):
-            self.__sync_attr()
+            try:
+                self.__sync_attr(connection, timeout=timeout)
+            except ZMQPairTimeout:
+                raise ConnectionError("Server dropped connection at {}".format(self.__conn_id))
             self.__synced = True
             logger.info("Synced with server.")
 
@@ -299,9 +302,8 @@ class ClientConnection():
         logger.debug("Sent Message: {}".format(msg))
         return ClientConnection.ConnectionListener(connection, max_interval)
 
-    def __sync_attr(self, timeout=None):
-        connection = _get_connection(self.__conn_id)
-        connection.send_msg(MSG(MSGType.SYNC, request=True))
+    def __sync_attr(self, connection, timeout=None):
+        connection.send_msg(MSG(MSGType.SYNC, request=True), timeout=timeout)
         extra_list = list()
         while(True):
             msg = connection.recv_msg(timeout=timeout)

@@ -11,7 +11,7 @@ setup(
     description="Local and Remote Console executor",
     packages=["conplyent", "conplyent_scripts"],
     install_requires=[
-        "pyzmq==17.1.2",
+        "pyzmq>=17.1.2",
         "click>=7.0",
         "psutil>=5.4.5"],
     entry_points={
