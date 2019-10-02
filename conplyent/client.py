@@ -424,7 +424,7 @@ class ClientConnection():
             try:
                 self.__receive_message(timeout=self._max_interval, exception=ClientTimeout)
             except (ZMQPairTimeout):
-                raise ClientTimeout("Server did not respond in {} s".format(timeout))
+                raise ClientTimeout("Server did not respond in {} s".format(self._max_interval))
             return self.__response
 
         def clear_messages(self):
